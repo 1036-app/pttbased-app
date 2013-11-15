@@ -1,0 +1,149 @@
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex
+END
+lsp.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/lsp.o.d
+END
+ltp.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/ltp.o.d
+END
+bits.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/bits.o.d
+END
+nb_celp.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/nb_celp.o.d
+END
+exc_5_256_table.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/exc_5_256_table.o.d
+END
+quant_lsp.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/quant_lsp.o.d
+END
+modes.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/modes.o.d
+END
+lsp_tables_nb.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/lsp_tables_nb.o.d
+END
+exc_8_128_table.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/exc_8_128_table.o.d
+END
+window.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/window.o.d
+END
+filters.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/filters.o.d
+END
+cb_search.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/cb_search.o.d
+END
+lpc.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/lpc.o.d
+END
+exc_5_64_table.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 98
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/exc_5_64_table.o.d
+END
+speex_callbacks.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/speex_callbacks.o.d
+END
+speex.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/speex.o.d
+END
+gain_table_lbr.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 98
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/gain_table_lbr.o.d
+END
+gain_table.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/gain_table.o.d
+END
+vq.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/vq.o.d
+END
+high_lsp_tables.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/high_lsp_tables.o.d
+END
+vbr.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/vbr.o.d
+END
+exc_10_32_table.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/exc_10_32_table.o.d
+END
+exc_20_32_table.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/exc_20_32_table.o.d
+END
+exc_10_16_table.o.d
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svn/!svn/ver/43/trunk/pttdroid/obj/local/armeabi/objs/speex_jni/speex/libspeex/exc_10_16_table.o.d
+END
