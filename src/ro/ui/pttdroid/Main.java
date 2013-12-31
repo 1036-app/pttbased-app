@@ -44,7 +44,7 @@ import android.widget.Toast;
 
 public class Main extends Activity
 {
-	
+	//Git push test
 	private static boolean firstLaunch = true;	
 			
 	private static volatile	Player	player;
