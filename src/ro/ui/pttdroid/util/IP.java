@@ -30,7 +30,7 @@ public class IP
 	static private LinkedList<InetAddress> addresses = new LinkedList<InetAddress>(); 
 
 	/**
-	 * 
+	 * 找到所有的可用的网络内部接口，并将其放在列表addresses中
 	 */
 	public static void load() 
 	{
@@ -54,7 +54,7 @@ public class IP
 	}
 	
 	/**
-	 * 
+	 * addresses列表是否存在addr这个地址，若存在，返回TRUE
 	 * @param addr
 	 * @return
 	 */

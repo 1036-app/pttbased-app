@@ -44,9 +44,7 @@ import android.widget.Toast;
 
 public class Main extends Activity
 {
-	//Git push test
-	//Git push test2
-	//Git push test3
+	
 	private static boolean firstLaunch = true;	
 			
 	private static volatile	Player	player;
@@ -61,7 +59,7 @@ public class Main extends Activity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);        
-                      
+        
         init();          
     }
     
@@ -84,29 +82,30 @@ public class Main extends Activity
     @Override
     public boolean onCreateOptionsMenu(Menu menu) 
     {
-    	getMenuInflater().inflate(R.menu.menu, menu);
+    	getMenuInflater().inflate(R.menu.menu, menu);//为程序设置菜单，菜单具体内容来自res/menu/menu.xml文件
     	return true;
     }
     
     @Override
+    //
     public boolean onOptionsItemSelected(MenuItem item) 
     {
-    	Intent i; 
+    	Intent i;                                 //当用户点击菜单里面的内容时程序的响应
     	
     	switch(item.getItemId()) {
     	case R.id.quit:
     		shutdown();
     		return true;
     	case R.id.settings_comm:
-    		i = new Intent(this, CommSettings.class);
-    		startActivityForResult(i, 0);    		
+    		i = new Intent(this, CommSettings.class);//若用户选择了communication 这一项，则跳到CommSettingsActivity
+    		startActivityForResult(i, 0);    	//能返回到之前的Activity	
     		return true;
     	case R.id.settings_audio:
     		i = new Intent(this, AudioSettings.class);
     		startActivityForResult(i, 0);    		
     		return true;    
     	case R.id.settings_reset_all:
-    		return resetAllSettings();    		
+    		return resetAllSettings();    //全部恢复到初始值		
     	default:
     		return super.onOptionsItemSelected(item);
     	}
@@ -123,7 +122,7 @@ public class Main extends Activity
     	Editor editor = prefs.edit();
     	editor.clear();
     	editor.commit();   
-    	
+    	//设置提醒信息
     	Toast toast = Toast.makeText(this, getString(R.string.setting_reset_all_confirm), Toast.LENGTH_SHORT);    	
     	toast.setGravity(Gravity.CENTER, 0, 0);
     	toast.show();
@@ -134,8 +133,8 @@ public class Main extends Activity
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) 
     {
-    	CommSettings.getSettings(this);     	    	
-    	AudioSettings.getSettings(this);    	
+    	CommSettings.getSettings(this);   //将一些设置的信息传给  	CommSettingActivity    	
+    	AudioSettings.getSettings(this);    //将一些设置的信息传给  AudioSettingActivity	
     }
     
     private void init() 
@@ -145,12 +144,12 @@ public class Main extends Activity
     		CommSettings.getSettings(this);
     		AudioSettings.getSettings(this);
     		 
-        	setVolumeControlStream(AudioManager.STREAM_MUSIC);
+        	setVolumeControlStream(AudioManager.STREAM_MUSIC);//设置音量键控制的音频流
     		
-    		Speex.open(AudioSettings.getSpeexQuality());
+    		Speex.open(AudioSettings.getSpeexQuality());//按用户选定的码率进行音频压缩
     		    	    	 
     		playerIntent = new Intent(this, Player.class);            
-            startService(playerIntent);                		
+            startService(playerIntent);   //启动player服务             		
     		
     		recorder = new Recorder();
     		recorder.start();     		    		
@@ -164,6 +163,7 @@ public class Main extends Activity
     
     private void shutdown() 
     {    	  
+    	
     	firstLaunch = true;    	
     	stopService(playerIntent);
     	recorder.shutdown();    		
@@ -183,7 +183,11 @@ public class Main extends Activity
 			player = null;		
 		}
 	};
-	
+	/**
+	 * MicrophoneSwitcher是一个线程，当用户点击（准备进行语音通话），释放屏幕（通话结束）时，执行的各种操作
+	 * @author PC
+	 *
+	 */
 	private class MicrophoneSwitcher implements Runnable, OnTouchListener 
 	{	
 		private Handler 	handler = new Handler();
@@ -207,34 +211,34 @@ public class Main extends Activity
 		public void init()
 		{
 	    	microphoneImage = (ImageView) findViewById(R.id.microphone_image);
-	    	microphoneImage.setOnTouchListener(this);
+	    	microphoneImage.setOnTouchListener(this);//在图片上设置点击监听器
 	    
 	    	 
 	    	Intent intent = new Intent(Main.this, Player.class); 
     		playerServiceConnection = new PlayerServiceConnection();
     		bindService(intent, playerServiceConnection, Context.BIND_AUTO_CREATE);
-
-	    	handler.postDelayed(this, PROGRESS_CHECK_PERIOD);
+                 // 绑定服务，创建一个长期存在的连接
+	    	handler.postDelayed(this, PROGRESS_CHECK_PERIOD); //100ms之后执行该（MicrophoneSwitcher）线程
 		}
 	    
 		public synchronized void run() 
 		{					
-			if(running)
+			if(running) 
 			{
-				int currentProgress = player.getProgress();
-
-				if(currentProgress > previousProgress) 
+				int currentProgress = player.getProgress(); //
+				
+				if(currentProgress > previousProgress)  //？？？当音频数据在播放时
 				{
-					if(microphoneState!=MIC_STATE_DISABLED) 
+					if(microphoneState!=MIC_STATE_DISABLED) //若当前点击屏幕可以通话
 					{
-						recorder.pauseAudio();
-						setMicrophoneState(MIC_STATE_DISABLED);							
+						recorder.pauseAudio();  //暂停记录
+						setMicrophoneState(MIC_STATE_DISABLED);	//设置当前点击屏幕不可用						
 					}						 							
 				}
 				else 
 				{
-					if(microphoneState==MIC_STATE_DISABLED)
-						setMicrophoneState(MIC_STATE_NORMAL);
+					if(microphoneState==MIC_STATE_DISABLED)  //若当前点击屏幕不可用
+						setMicrophoneState(MIC_STATE_NORMAL); //回复点击屏幕可用（可进行语言通话）
 				}
 
 				previousProgress = currentProgress;
@@ -244,23 +248,30 @@ public class Main extends Activity
 				
 		}
 		
+	/**
+	 * 对用户点击屏幕的响应
+	 */
 		public boolean onTouch(View v, MotionEvent e) 
 	    {
 	    	if(microphoneState!=MicrophoneSwitcher.MIC_STATE_DISABLED) 
 	    	{    		
 	    		switch(e.getAction()) {
-	    		case MotionEvent.ACTION_DOWN:    			
-	    			recorder.resumeAudio();
-	    			setMicrophoneState(MicrophoneSwitcher.MIC_STATE_PRESSED);
+	    		case MotionEvent.ACTION_DOWN:    //若用户按了屏幕			
+	    			recorder.resumeAudio(); //通知recorder开始记录
+	    			setMicrophoneState(MicrophoneSwitcher.MIC_STATE_PRESSED); //设置屏幕点击不可用
 	    			break;
-	    		case MotionEvent.ACTION_UP:
-	    			setMicrophoneState(MicrophoneSwitcher.MIC_STATE_NORMAL);
-	    			recorder.pauseAudio();    			
+	    		case MotionEvent.ACTION_UP:  //用户放开了屏幕
+	    			setMicrophoneState(MicrophoneSwitcher.MIC_STATE_NORMAL); //设置屏幕点击可用
+	    			recorder.pauseAudio();   //通知recorder停止记录 			
 	    			break;
 	    		}
 	    	}
 	    	return true;
 	    }
+		/**
+		 * 当屏幕属于不同状态（按下，可点击，不可点击）时，为其设置不同的图片
+		 * @param state
+		 */
 		public void setMicrophoneState(int state) 
 	    {
 	    	switch(state) {
@@ -278,7 +289,9 @@ public class Main extends Activity
 	    		break;    		
 	    	}
 	    }
-	    
+	    /**
+	     * 线程结束时要解除绑定的服务，并从线程队列中移除该线程
+	     */
 		public synchronized void shutdown()
 		{
 			unbindService(playerServiceConnection);

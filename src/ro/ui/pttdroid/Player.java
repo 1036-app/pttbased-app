@@ -65,19 +65,23 @@ public class Player extends Service
 	{		 
 		playerThread = new PlayerThread();
 		playerThread.start();
-		
+		//TelephonyManager类主要提供了一系列用于访问与手机通讯相关的状态和信息的get方法
 		telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 		phoneCallListener = new PhoneCallListener();
-		telephonyManager.listen(phoneCallListener, PhoneStateListener.LISTEN_CALL_STATE);
+		telephonyManager.listen(phoneCallListener, PhoneStateListener.LISTEN_CALL_STATE);//监听手机的call状态
 		
+		//创建一个通知，制定其图标，标题及通知时间
 		Notification notification = new Notification(R.drawable.notif_icon, 
 				getText(R.string.app_name),
 		        System.currentTimeMillis());
+		
 		Intent notificationIntent = new Intent(this, Main.class);
+		
+		//当点击消息时就会向系统发送notificationIntent
 		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 		notification.setLatestEventInfo(this, getText(R.string.app_name),
 		        getText(R.string.app_running), pendingIntent);
-		startForeground(1, notification);
+		startForeground(1, notification);  
     }
 	
 	@Override
@@ -103,10 +107,14 @@ public class Player extends Service
 	{
 		return playerThread.getProgress();
 	}
-	
+	/**
+	 * 
+	 * @author PC
+	 *
+	 */
 	private class PlayerThread extends Thread
 	{
-		private AudioTrack 	player;
+		private AudioTrack 	player; //用来播放声音的
 		
 		private volatile boolean running = true;	
 		private volatile boolean playing = true;
@@ -116,8 +124,8 @@ public class Player extends Service
 		
 		private short[] pcmFrame = new short[Audio.FRAME_SIZE];
 		private byte[] 	encodedFrame;
-		
-		private AtomicInteger progress = new AtomicInteger(0);
+		//AtomicInteger，一个提供原子操作的Integer的类。
+		private AtomicInteger progress = new AtomicInteger(0);//设定初始值为0
 		
 		public void run() 
 		{
@@ -131,7 +139,7 @@ public class Player extends Service
 				{							
 					try 
 					{				
-						socket.receive(packet);	
+						socket.receive(packet);	//接收音频数据包
 					}
 					catch(SocketException e) //Due to socket.close() 
 					{
@@ -141,21 +149,22 @@ public class Player extends Service
 					{
 						Log.error(getClass(), e);
 					}					
-
+                  //若用户设定为没有回音，且能找到对方的IP地址
 					if(AudioSettings.getEchoState()==AudioSettings.ECHO_OFF && IP.contains(packet.getAddress()))
 						continue;
 
-					if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) 
+					if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) //用户选择了默认的值（自己选择码率）
 					{
-						Speex.decode(encodedFrame, encodedFrame.length, pcmFrame);
-						player.write(pcmFrame, 0, Audio.FRAME_SIZE);
+						Speex.decode(encodedFrame, encodedFrame.length, pcmFrame);//音频解码，结果放到pcmFrame中
+						player.write(pcmFrame, 0, Audio.FRAME_SIZE);//把音频数据写到player中
 					}
 					else 
 					{			
 						player.write(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
+						//第一个参数，音频数据，第二个参数，偏移量，即从哪开始，第三个参数，数据大小
 					}	
 
-					progress.incrementAndGet();
+					progress.incrementAndGet();//自增加1并获取该值
 				}
 
 				player.stop();
@@ -268,11 +277,11 @@ public class Player extends Service
 	{
 		
 		@Override
-		public void onCallStateChanged (int state, String incomingNumber)
+		public void onCallStateChanged (int state, String incomingNumber)//监听电话的状态，一旦状态改变，则调用该函数
 		{
-			if(state==TelephonyManager.CALL_STATE_OFFHOOK)
+			if(state==TelephonyManager.CALL_STATE_OFFHOOK)//电话挂机状态
 				playerThread.pauseAudio();
-			else if(state==TelephonyManager.CALL_STATE_IDLE)
+			else if(state==TelephonyManager.CALL_STATE_IDLE)//电话空闲状态
 				playerThread.resumeAudio();
 		}
 		
