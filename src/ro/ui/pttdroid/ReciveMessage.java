@@ -102,7 +102,9 @@ public class ReciveMessage extends Service
 		   {
 		     try 
 		     {	
-		 	  socket.receive(packet); //接收信息数据包
+		      data=new byte[256];
+			  packet=new DatagramPacket(data, data.length);
+		      socket.receive(packet); //接收信息数据包
 		 	  senderAddress=packet.getAddress();
 		 	  //System.out.println("接收到的数据"+packet.getData());
 		     }
@@ -117,12 +119,13 @@ public class ReciveMessage extends Service
 		   
 		   try 
 		   {
-			messages=new String(data,"UTF-8");        //byte[]转换为string类型
-			int index=0;
-			while((index = messages.indexOf("/END")) != -1)
-			   {
-				   messages = messages.substring(0,index);            
-			   }
+			  messages = new String(packet.getData(),0,packet.getLength(),"utf-8");
+			//messages=new String(data,"UTF-8");        //byte[]转换为string类型
+			//int index=0;
+			//while((index = messages.indexOf("/END")) != -1)
+			//   {
+			//	   messages = messages.substring(0,index);            
+			//   }
 	        } 
 		   catch (IOException e) 
 		   {
@@ -151,8 +154,6 @@ public class ReciveMessage extends Service
 		try
 		{
 		socket=new DatagramSocket(40000);
-		data=new byte[256];
-		packet=new DatagramPacket(data, data.length);
 		}
 		catch(SocketException e)
 		{

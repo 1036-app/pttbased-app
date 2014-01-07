@@ -279,11 +279,11 @@ public class MessageActivity extends Activity
 					 break;
 				}
 				data = textMessage.getText().toString();
-				dataEnd=data+"/END";
+				//dataEnd=data+"/END";
 				//System.out.println("发出的短信" + data);
 				try {
 					                                   
-					messages = dataEnd.getBytes("UTF8");// 将string类型的数据转换为byte[]类型的
+					messages = data.getBytes("UTF8");// 将string类型的数据转换为byte[]类型的
 					
 				} catch (UnsupportedEncodingException e)
 				{
