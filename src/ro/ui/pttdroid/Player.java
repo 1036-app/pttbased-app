@@ -46,9 +46,7 @@ import android.telephony.TelephonyManager;
 public class Player extends Service
 {
 	private PlayerThread 	playerThread;
-	
 	private IBinder playerBinder = new PlayerBinder();
-	
 	private TelephonyManager	telephonyManager;
 	private PhoneCallListener	phoneCallListener;
 	
@@ -58,26 +56,22 @@ public class Player extends Service
 		{        
             return Player.this;
         }
-    }
-	
+    }	
 	@Override
     public void onCreate() 
 	{		 
 		playerThread = new PlayerThread();
 		playerThread.start();
-		//TelephonyManager类主要提供了一系列用于访问与手机通讯相关的状态和信息的get方法
+		                     //TelephonyManager类主要提供了一系列用于访问与手机通讯相关的状态和信息的get方法
 		telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 		phoneCallListener = new PhoneCallListener();
-		telephonyManager.listen(phoneCallListener, PhoneStateListener.LISTEN_CALL_STATE);//监听手机的call状态
-		
-		//创建一个通知，制定其图标，标题及通知时间
+		telephonyManager.listen(phoneCallListener, PhoneStateListener.LISTEN_CALL_STATE);//监听手机的call状态	
+		                   //创建一个通知，制定其图标，标题及通知时间
 		Notification notification = new Notification(R.drawable.notif_icon, 
 				getText(R.string.app_name),
 		        System.currentTimeMillis());
 		
-		Intent notificationIntent = new Intent(this, Main.class);
-		
-		//当点击消息时就会向系统发送notificationIntent
+		Intent notificationIntent = new Intent(this, Main.class);  //当点击消息时就会向系统发送notificationIntent
 		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 		notification.setLatestEventInfo(this, getText(R.string.app_name),
 		        getText(R.string.app_running), pendingIntent);
@@ -115,16 +109,13 @@ public class Player extends Service
 	private class PlayerThread extends Thread
 	{
 		private AudioTrack 	player; //用来播放声音的
-		
 		private volatile boolean running = true;	
 		private volatile boolean playing = true;
-		
 		private DatagramSocket 	socket;		
 		private DatagramPacket 	packet;	
-		
 		private short[] pcmFrame = new short[Audio.FRAME_SIZE];
 		private byte[] 	encodedFrame;
-		//AtomicInteger，一个提供原子操作的Integer的类。
+		                        //AtomicInteger，一个提供原子操作的Integer的类。
 		private AtomicInteger progress = new AtomicInteger(0);//设定初始值为0
 		
 		public void run() 
@@ -134,7 +125,6 @@ public class Player extends Service
 			while(isRunning())
 			{				
 				init();
-				
 				while(isPlaying()) 
 				{							
 					try 
@@ -149,10 +139,9 @@ public class Player extends Service
 					{
 						Log.error(getClass(), e);
 					}					
-                  //若用户设定为没有回音，且能找到对方的IP地址
+                                               //若用户设定为没有回音，且能找到对方的IP地址
 					if(AudioSettings.getEchoState()==AudioSettings.ECHO_OFF && IP.contains(packet.getAddress()))
 						continue;
-
 					if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) //用户选择了默认的值（自己选择码率）
 					{
 						Speex.decode(encodedFrame, encodedFrame.length, pcmFrame);//音频解码，结果放到pcmFrame中
@@ -161,10 +150,9 @@ public class Player extends Service
 					else 
 					{			
 						player.write(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
-						//第一个参数，音频数据，第二个参数，偏移量，即从哪开始，第三个参数，数据大小
+						                             //第一个参数，音频数据，第二个参数，偏移量，即从哪开始，第三个参数，数据大小
 					}	
-
-					progress.incrementAndGet();//自增加1并获取该值
+					progress.incrementAndGet();      //自增加1并获取该值
 				}
 
 				player.stop();
@@ -200,25 +188,22 @@ public class Player extends Service
 				switch(CommSettings.getCastType()) 
 				{
 					case CommSettings.BROADCAST:
-						socket = new DatagramSocket(CommSettings.getPort());
-						socket.setBroadcast(true);
-					break;
+						 socket = new DatagramSocket(CommSettings.getPort());
+						 socket.setBroadcast(true);
+					     break;
 					case CommSettings.MULTICAST:
-						socket = new MulticastSocket(CommSettings.getPort());
-						((MulticastSocket) socket).joinGroup(CommSettings.getMulticastAddr());										
-					break;
+						 socket = new MulticastSocket(CommSettings.getPort());
+						 ((MulticastSocket) socket).joinGroup(CommSettings.getMulticastAddr());										
+					     break;
 					case CommSettings.UNICAST:
-						socket = new DatagramSocket(CommSettings.getPort());
-					break;
-				}							
-				
+						 socket = new DatagramSocket(CommSettings.getPort());
+					     break;
+				}								
 				if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) 
 					encodedFrame = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];
 				else 
 					encodedFrame = new byte[Audio.FRAME_SIZE_IN_BYTES];
-				
 				packet = new DatagramPacket(encodedFrame, encodedFrame.length);
-				
 				player.play();
 			}
 			catch(IOException e) 
@@ -264,6 +249,8 @@ public class Player extends Service
 			pauseAudio();
 			running = false;						
 			notify();
+			if(socket!=null)
+			socket.close();
 		}
 		
 		public int getProgress() 
@@ -279,9 +266,9 @@ public class Player extends Service
 		@Override
 		public void onCallStateChanged (int state, String incomingNumber)//监听电话的状态，一旦状态改变，则调用该函数
 		{
-			if(state==TelephonyManager.CALL_STATE_OFFHOOK)//电话挂机状态
+			if(state==TelephonyManager.CALL_STATE_OFFHOOK)    //电话挂机状态
 				playerThread.pauseAudio();
-			else if(state==TelephonyManager.CALL_STATE_IDLE)//电话空闲状态
+			else if(state==TelephonyManager.CALL_STATE_IDLE)  //电话空闲状态
 				playerThread.resumeAudio();
 		}
 		

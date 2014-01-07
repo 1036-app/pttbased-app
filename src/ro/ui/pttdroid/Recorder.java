@@ -36,13 +36,10 @@ import android.media.MediaRecorder.AudioSource;
 public class Recorder extends Thread
 {	
 	private AudioRecord recorder;
-	
 	private volatile boolean recording = false;
 	private volatile boolean running = true;
-	
 	private DatagramSocket socket;
 	private DatagramPacket packet;
-	
 	private short[] pcmFrame = new short[Audio.FRAME_SIZE];
 	private byte[] encodedFrame;
 			
@@ -50,27 +47,23 @@ public class Recorder extends Thread
 	{
 		android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
 		
-		init();
-		
 		while(isRunning()) 
-		{		
+		{	init();	
 			recorder.startRecording();
-			
 			while(isRecording()) 
 			{
-				if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) //用户选择了默认的值（自己选择码率）
+				if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)//用户选择了默认的值（自己选择码率）
 				{
-					recorder.read(pcmFrame, 0, Audio.FRAME_SIZE);//把音频数据记录到缓存pcmFrame中
-					Speex.encode(pcmFrame, encodedFrame);		//对音频数据进行编码，结果放到encodedFrame中				
+					recorder.read(pcmFrame, 0, Audio.FRAME_SIZE);    //把音频数据记录到缓存pcmFrame中
+					Speex.encode(pcmFrame, encodedFrame);		     //对音频数据进行编码，结果放到encodedFrame中				
 				}
 				else
 				{
 					recorder.read(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
 				}
-
 				try 
 				{																				 
-					socket.send(packet);//发送音频数据
+					socket.send(packet);   
 				}
 				catch(IOException e) 
 				{
@@ -103,35 +96,31 @@ public class Recorder extends Thread
 		try 
 		{	    	
 			IP.load();
-			
 			socket = new DatagramSocket();			
-			InetAddress addr = null;
-			
+			InetAddress addr = null;	
 			switch(CommSettings.getCastType()) 
 			{
 				case CommSettings.BROADCAST:
-					socket.setBroadcast(true);		
-					addr = CommSettings.getBroadcastAddr();
-				break;
+					 socket.setBroadcast(true);		
+					 addr = CommSettings.getBroadcastAddr();
+				     break;
 				case CommSettings.MULTICAST:
-					addr = CommSettings.getMulticastAddr();					
-				break;
+					 addr = CommSettings.getMulticastAddr();					
+				     break;
 				case CommSettings.UNICAST:
-					addr = CommSettings.getUnicastAddr();					
-				break;
+					 addr = CommSettings.getUnicastAddr();					
+				     break;
 			}							
 			
-			if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)//用户选择了默认值USE_SPEEX，即自己选择码率编码
+			if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)      //用户选择了默认值USE_SPEEX，即自己选择码率编码
 				encodedFrame = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];//获得音频数据编码以后的大小
 			else 
-				encodedFrame = new byte[Audio.FRAME_SIZE_IN_BYTES];
-			//音频数据包，包括音频数据，数据长度值，目的地址，目的端口
+				encodedFrame = new byte[Audio.FRAME_SIZE_IN_BYTES];                             
 			packet = new DatagramPacket(
 					encodedFrame, 
 					encodedFrame.length, 
 					addr, 
-					CommSettings.getPort());
-
+					CommSettings.getPort());                   //音频数据包，包括音频数据，数据长度值，目的地址，目的端口
 	    	recorder = new AudioRecord(
 	    			AudioSource.MIC, 
 	    			Audio.SAMPLE_RATE, 
