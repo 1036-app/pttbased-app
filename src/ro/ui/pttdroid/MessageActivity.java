@@ -31,7 +31,6 @@ public class MessageActivity extends Activity
 
 	public static Intent reciveIntent;
 	public static SendMessage sendMessage;
-	//public static ReciveMessage reciveMessage;
 	public Button sendButton = null;
 	public TextView textIP = null;
 	public TextView textTotal = null;
