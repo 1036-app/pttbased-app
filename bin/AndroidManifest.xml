@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />    
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission>
+    <uses-permission android:name="android.permission.WAKE_LOCK"></uses-permission>
     
     <application 
         android:icon="@drawable/icon" 
@@ -40,7 +43,8 @@
         <activity 
             android:name=".MessageActivity" 
             android:label="@string/Sendmessage_name" 
-            android:theme="@android:style/Theme.NoTitleBar.Fullscreen">        	
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:screenOrientation="portrait">        	
         </activity>
         <service android:name=".Player"></service>
         <service android:name=".ReciveMessage"></service>

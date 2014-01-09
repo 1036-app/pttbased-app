@@ -1,10 +1,17 @@
 package ro.ui.pttdroid;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
 import ro.ui.pttdroid.ReciveMessage.ReciveBinder;
 import ro.ui.pttdroid.settings.CommSettings;
 import ro.ui.pttdroid.util.IP;
@@ -14,6 +21,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -44,9 +53,12 @@ public class MessageActivity extends Activity
 	public Runnable updateSend=null;
 	public Recieve recieve = null;
 	public boolean rec = false;
-	public String receivedMessages = "";
 	public String receivedIP = "";
-    public Handler updateHandler;
+    public Handler updateHandler; 
+    public String time=null;
+	public TransportData sendData=new TransportData();
+	public TransportData receivedData =null;
+	
 	private void init() 
 	{
 		sendMessage = new SendMessage();
@@ -79,7 +91,6 @@ public class MessageActivity extends Activity
 	public void onCreate(Bundle savedInstanceState) 
 	{
 		updateHandler=new Handler();
-		
 		init();
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.send);
@@ -89,25 +100,51 @@ public class MessageActivity extends Activity
 		textMessage = (EditText) findViewById(R.id.textMessage);
 		sendButton.setOnClickListener(new sendButtonListener());// 为按钮添加监听器
 		textTotal.setMovementMethod(ScrollingMovementMethod.getInstance());
-		textTotal.setScrollbarFadingEnabled(false);
+		textTotal.setScrollbarFadingEnabled(false);                                                          
 		updateSend =new Runnable()
 		{
+			
 			public void run()
-			{
-			    textTotal.append("me: "+data + "\n");  
+			{ 
+			    textTotal.append("me:     "+time+"\n");  
+			    textTotal.append(data +"\n");  
 			}
 			
 		};
+		
 		updateRecive =new Runnable()
 		{
 			public void run()
 			{
-		     textTotal.append(receivedIP+": "+receivedMessages + "\n");
+				
+				String IP="/"+getIp();
+				if(!receivedIP.equals(IP))
+				{	
+		        textTotal.append(receivedIP+"     "+receivedData.time+"\n");
+		        textTotal.append(receivedData.data +"\n");
+				}
+				
 			}
 			
 		};
-	
 	}
+	public String getIp()
+	{  
+	    WifiManager wm=(WifiManager)getSystemService(Context.WIFI_SERVICE);  
+	    if(!wm.isWifiEnabled())                     //检查Wifi状态     
+	     wm.setWifiEnabled(true);  
+	    WifiInfo wi=wm.getConnectionInfo();        //获取32位整型IP地址     
+	    int IpAdd=wi.getIpAddress();  
+	    String Ip=intToIp(IpAdd);                 //把整型地址转换成“*.*.*.*”地址     
+	    return Ip;      
+	}  
+	private String intToIp(int IpAdd) 
+	{  
+	    return (IpAdd & 0xFF ) + "." +  
+	    ((IpAdd >> 8 ) & 0xFF) + "." +  
+	    ((IpAdd >> 16 ) & 0xFF) + "." +  
+	    ( IpAdd >> 24 & 0xFF) ;  
+	}   
 
 	/**
 	 * 为程序设置菜单，菜单具体内容来自res/menu/menu.xml文件
@@ -167,9 +204,9 @@ public class MessageActivity extends Activity
 			while (rec == true)
 			{
 				                                           // 接收到发来的短信
-				if (recivebinder.getMessages() != ""&& receivedMessages != recivebinder.getMessages()) 
+				if (recivebinder.getMessages() !=null&& receivedData != recivebinder.getMessages()) 
 				{
-					receivedMessages = recivebinder.getMessages();
+					receivedData = recivebinder.getMessages();
 					receivedIP = recivebinder.getIP();
 					//System.out.println("收到的发来的消息" + receivedMessages);
 					updateHandler.post(updateRecive);
@@ -279,19 +316,37 @@ public class MessageActivity extends Activity
 					 break;
 				}
 				data = textMessage.getText().toString();
-				//dataEnd=data+"/END";
 				//System.out.println("发出的短信" + data);
-				try {
+				SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd   HH:mm:ss");     
+				Date curDate=new Date(System.currentTimeMillis());
+				time=formatter.format(curDate); 
+				sendData.data=data;
+				sendData.time=time;
+				/*try {
 					                                   
 					messages = data.getBytes("UTF8");// 将string类型的数据转换为byte[]类型的
 					
 				} catch (UnsupportedEncodingException e)
 				{
 					e.printStackTrace();
-				}
+				}*/
+			try {  
+		            ByteArrayOutputStream baos = new ByteArrayOutputStream();  
+		            ObjectOutputStream oos = new ObjectOutputStream(baos);  
+		            oos.writeObject(sendData);  
+		            messages = baos.toByteArray();  
+		            baos.close();  
+		            oos.close();      
+		        }  
+		        catch(Exception e) 
+		        {   
+		            e.printStackTrace();  
+		        }   
+
 
 		     // packet = new DatagramPacket(messages, messages.length, addr, CommSettings.getPort());
 				packet = new DatagramPacket(messages, messages.length, addr,40000);
+			
 			} catch (SocketException e) {
 				Log.error(getClass(), e);
 			}

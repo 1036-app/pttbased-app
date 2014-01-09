@@ -92,7 +92,6 @@ public class Main extends Activity
     		return true;
     	case R.id.send:
     		i = new Intent(this, MessageActivity.class); 
-			startActivity(i);
 			startActivityForResult(i, 0); 
               return true;
     	case R.id.settings_comm:

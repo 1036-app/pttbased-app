@@ -1,6 +1,8 @@
 package ro.ui.pttdroid;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -30,12 +32,12 @@ public class ReciveMessage extends Service
 	public String messages="";
 	public InetAddress senderAddress = null;
 	public IBinder reciveBinder = new ReciveBinder();
+	public TransportData recieveData=null;
 	@Override
 	public IBinder onBind(Intent intent) 
 	{
 		return reciveBinder;
 	}
-	
 	@Override
 	public boolean onUnbind(Intent intent)
 	{
@@ -46,9 +48,9 @@ public class ReciveMessage extends Service
 
 	public class ReciveBinder extends Binder 
 	{
-       public String getMessages()
+       public TransportData getMessages()
         {
-	     return messages;
+	     return recieveData;
         }
        public String getIP()
        {
@@ -90,7 +92,7 @@ public class ReciveMessage extends Service
 	{
 		public DatagramSocket 	socket=null;		
 		public DatagramPacket 	packet=null;	
-		public MessageActivity messActivity;
+		public MessageActivity  messActivity;
 		@Override
 		public void run()
 		{
@@ -106,7 +108,8 @@ public class ReciveMessage extends Service
 			  packet=new DatagramPacket(data, data.length);
 		      socket.receive(packet); //接收信息数据包
 		 	  senderAddress=packet.getAddress();
-		 	  //System.out.println("接收到的数据"+packet.getData());
+		 	  
+		 	 // System.out.println("接收到的数据"+packet.getData());
 		     }
 		   catch(SocketException e) 
 		    {
@@ -116,22 +119,27 @@ public class ReciveMessage extends Service
 		   {
 			Log.error(getClass(), e);
 		   }
-		   
-		   try 
+		   try {  
+		         ByteArrayInputStream bais = new ByteArrayInputStream(packet.getData());  
+		         ObjectInputStream ois = new ObjectInputStream(bais);  
+		         recieveData = (TransportData)ois.readObject();  
+		         bais.close();  
+		         ois.close();  
+		         }  
+		         catch(Exception e)
+		         {    
+		             e.printStackTrace();  
+		         }   
+
+		  /* try 
 		   {
 			  messages = new String(packet.getData(),0,packet.getLength(),"utf-8");
-			//messages=new String(data,"UTF-8");        //byte[]转换为string类型
-			//int index=0;
-			//while((index = messages.indexOf("/END")) != -1)
-			//   {
-			//	   messages = messages.substring(0,index);            
-			//   }
 	        } 
 		   catch (IOException e) 
 		   {
 				e.printStackTrace();
 		   }
-		   
+		   */
 		 }
 		 synchronized(this)
 			{
