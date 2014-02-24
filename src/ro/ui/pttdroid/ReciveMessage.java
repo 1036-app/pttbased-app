@@ -108,7 +108,7 @@ public class ReciveMessage extends Service
 			  packet=new DatagramPacket(data, data.length);
 		      socket.receive(packet); //接收信息数据包
 		 	  senderAddress=packet.getAddress();
-		 	  
+		 	  // 如果是发送数据包，则获得数据包要发送的目标地址，如果是接收数据包则返回发送此数据包的源地址。
 		 	 // System.out.println("接收到的数据"+packet.getData());
 		     }
 		   catch(SocketException e) 

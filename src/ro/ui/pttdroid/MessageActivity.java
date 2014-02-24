@@ -34,6 +34,7 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MessageActivity extends Activity 
 {
@@ -51,6 +52,8 @@ public class MessageActivity extends Activity
 	public ServiceConnection conn = null;
 	public Runnable updateRecive=null;
 	public Runnable updateSend=null;
+	
+	public Runnable updateWarning=null;
 	public Recieve recieve = null;
 	public boolean rec = false;
 	public String receivedIP = "";
@@ -58,9 +61,11 @@ public class MessageActivity extends Activity
     public String time=null;
 	public TransportData sendData=new TransportData();
 	public TransportData receivedData =null;
-	
+	public Intent intent=null;
+
 	private void init() 
 	{
+		
 		sendMessage = new SendMessage();
 		sendMessage.start();
 		recieve = new Recieve();
@@ -90,6 +95,7 @@ public class MessageActivity extends Activity
 	@Override
 	public void onCreate(Bundle savedInstanceState) 
 	{
+		intent=getIntent();  //实现当前Activity的和Main之间的通信
 		updateHandler=new Handler();
 		init();
 		super.onCreate(savedInstanceState);
@@ -118,7 +124,7 @@ public class MessageActivity extends Activity
 			{
 				
 				String IP="/"+getIp();
-				if(!receivedIP.equals(IP))
+				if(!receivedIP.equals(IP))  //不接收自己发出的信息
 				{	
 		        textTotal.append(receivedIP+"     "+receivedData.time+"\n");
 		        textTotal.append(receivedData.data +"\n");
@@ -127,16 +133,32 @@ public class MessageActivity extends Activity
 			}
 			
 		};
+		   updateWarning =new Runnable() 
+			{
+				
+				public void run()
+				{ 
+				 Toast.makeText(MessageActivity.this,"you have a new message",Toast.LENGTH_LONG ).show();
+				}
+				
+			};
 	}
+	/**
+	 * 获取自己的IP
+	 * @return
+	 */
 	public String getIp()
 	{  
 	    WifiManager wm=(WifiManager)getSystemService(Context.WIFI_SERVICE);  
 	    if(!wm.isWifiEnabled())                     //检查Wifi状态     
 	     wm.setWifiEnabled(true);  
 	    WifiInfo wi=wm.getConnectionInfo();        //获取32位整型IP地址     
-	    int IpAdd=wi.getIpAddress();  
-	    String Ip=intToIp(IpAdd);                 //把整型地址转换成“*.*.*.*”地址     
-	    return Ip;      
+	    int IpAdd=wi.getIpAddress(); 
+	   // System.out.println("sssssssssss"+IpAdd);
+	    String Ip=intToIp(IpAdd);                 //把整型地址转换成“*.*.*.*”地址  
+	   // System.out.println("sssdddddd"+Ip);
+	    return Ip; 
+	   
 	}  
 	private String intToIp(int IpAdd) 
 	{  
@@ -165,26 +187,21 @@ public class MessageActivity extends Activity
 			Destroy();
 			finish();
 			return true;
-		case R.id.returnmain:
-			Destroy();
-			finish();
-			i = new Intent(this, Main.class);
-			startActivity(i);
-			return true;
 		default:
 			return super.onOptionsItemSelected(item);
 		}
 	}
 
-	public void Destroy() 
+	protected void Destroy()
 	{
-		getApplicationContext().unbindService(conn);
+	   getApplicationContext().unbindService(conn);
 		stopService(reciveIntent);
 		sendMessage.shutdown();
 		recieve.destroy();
 		updateHandler.removeCallbacks(updateRecive);
 		updateHandler.removeCallbacks(updateSend);
-	}
+		
+    }
 
 	class sendButtonListener implements OnClickListener 
 	{
@@ -203,15 +220,20 @@ public class MessageActivity extends Activity
 			initRecive();                                  // 若rec=false则阻塞线程
 			while (rec == true)
 			{
-				                                           // 接收到发来的短信
+	
 				if (recivebinder.getMessages() !=null&& receivedData != recivebinder.getMessages()) 
-				{
+				   {
 					receivedData = recivebinder.getMessages();
 					receivedIP = recivebinder.getIP();
 					//System.out.println("收到的发来的消息" + receivedMessages);
 					updateHandler.post(updateRecive);
-				}
-                
+					String IP="/"+getIp();
+					if(!receivedIP.equals(IP))  //不接收自己发出的信息
+					{	
+					updateHandler.post(updateWarning);
+					}
+				    }
+			
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException e) 

@@ -17,6 +17,8 @@ along with pttdroid.  If not, see <http://www.gnu.org/licenses/>. */
 
 package ro.ui.pttdroid;
 
+import java.io.Serializable;
+
 import ro.ui.pttdroid.Player.PlayerBinder;
 import ro.ui.pttdroid.codecs.Speex;
 import ro.ui.pttdroid.settings.AudioSettings;
@@ -45,13 +47,12 @@ import android.widget.Toast;
 
 public class Main extends Activity
 {
-	
 	private static boolean firstLaunch = true;			
 	private static volatile	Player	player;
 	private static Recorder 		recorder;	
 	private MicrophoneSwitcher 	microphoneSwitcher;
     private static Intent 		playerIntent;
-    
+    public String Wmessage=null; 
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -80,7 +81,7 @@ public class Main extends Activity
     	getMenuInflater().inflate(R.menu.menu, menu); //为程序设置菜单，菜单具体内容来自res/menu/menu.xml文件
     	return true;
     }
-    
+ 
     @Override
     //
     public boolean onOptionsItemSelected(MenuItem item) 
@@ -93,6 +94,8 @@ public class Main extends Activity
     	case R.id.send:
     		i = new Intent(this, MessageActivity.class); 
 			startActivityForResult(i, 0); 
+			Wmessage=i.getStringExtra("WARNING");
+			System.out.println("sdddddds"+Wmessage);
               return true;
     	case R.id.settings_comm:
     		i = new Intent(this, CommSettings.class); //若用户选择了communication 这一项，则跳到CommSettingsActivity
@@ -107,6 +110,7 @@ public class Main extends Activity
     	default:
     		return super.onOptionsItemSelected(item);
     	}
+    	
     }
     
     /**

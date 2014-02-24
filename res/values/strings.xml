@@ -51,8 +51,8 @@
     <string name="settings_reset_all_label">Reset All</string>
     	<string name="setting_reset_all_confirm">All settings were restored to their default values</string>
    
-    <string name="return_label">return </string>	
-    <string name="returnmain_label">return main</string>	
+    <string name="return_label">return(close) </string>	
+    
     <string name="quit_label">Quit</string>	
     <string name="Sendmessage_name">pttroid SendMessage</string>	
     <string name="send_label">Send Message</string>	

@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android" >
-	<item android:id="@+id/returnmain"
-		android:title="@string/returnmain_label">
-	</item>
 	<item android:id="@+id/Return"
 		  android:icon="@drawable/quit_icon"
 		  android:title="@string/return_label">
