@@ -66,8 +66,7 @@ public class ReciveMessage extends Service
 	{
 	
 	    showMessage=new ShowMessage();
-	    showMessage.start();
-		                                          //TelephonyManager类主要提供了一系列用于访问与手机通讯相关的状态和信息的get方法
+	    showMessage.start();                                       //TelephonyManager类主要提供了一系列用于访问与手机通讯相关的状态和信息的get方法
 		telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 		phoneCallListener = new PhoneCallListener();
 		telephonyManager.listen(phoneCallListener, PhoneStateListener.LISTEN_CALL_STATE);//监听手机的call状态
@@ -104,6 +103,7 @@ public class ReciveMessage extends Service
 		   {
 		     try 
 		     {	
+		     
 		      data=new byte[256];
 			  packet=new DatagramPacket(data, data.length);
 		      socket.receive(packet); //接收信息数据包

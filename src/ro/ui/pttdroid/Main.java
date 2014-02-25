@@ -30,11 +30,13 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.database.sqlite.SQLiteDatabase;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.preference.PreferenceManager;
 import android.view.Gravity;
 import android.view.Menu;
@@ -52,13 +54,20 @@ public class Main extends Activity
 	private static Recorder 		recorder;	
 	private MicrophoneSwitcher 	microphoneSwitcher;
     private static Intent 		playerIntent;
-    public String Wmessage=null; 
+    private MyHandler handler=null;
+    private myApplication mAPP=null;
+   
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
         super.onCreate(savedInstanceState);
+        mAPP = (myApplication) getApplication();   
+        handler = new MyHandler(); 
+        mAPP.setHandler(handler);
         setContentView(R.layout.main);           
-        init();          
+        init();  
+      
+       
     }
     
     @Override
@@ -94,9 +103,7 @@ public class Main extends Activity
     	case R.id.send:
     		i = new Intent(this, MessageActivity.class); 
 			startActivityForResult(i, 0); 
-			Wmessage=i.getStringExtra("WARNING");
-			System.out.println("sdddddds"+Wmessage);
-              return true;
+            return true;
     	case R.id.settings_comm:
     		i = new Intent(this, CommSettings.class); //若用户选择了communication 这一项，则跳到CommSettingsActivity
     		startActivityForResult(i, 0);    	      //能返回到之前的Activity	
@@ -135,7 +142,17 @@ public class Main extends Activity
     	CommSettings.getSettings(this);              //将最新的设置信息当前的属性变量中
     	AudioSettings.getSettings(this);    
     }
-    
+    public class MyHandler extends Handler 
+    {  
+        @Override  
+        public void handleMessage(Message msg) 
+        {  
+        	//if(msg.what==1)
+        	//Toast.makeText(Main.this,"you have a new message",Toast.LENGTH_SHORT ).show();
+            super.handleMessage(msg);  
+ 
+        }  
+    }  
     private void init() 
     {    	    	    	
     	if(firstLaunch) 

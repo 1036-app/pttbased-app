@@ -12,20 +12,25 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
+import ro.ui.pttdroid.Main.MyHandler;
 import ro.ui.pttdroid.ReciveMessage.ReciveBinder;
 import ro.ui.pttdroid.settings.CommSettings;
 import ro.ui.pttdroid.util.IP;
 import ro.ui.pttdroid.util.Log;
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.text.method.ScrollingMovementMethod;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -62,7 +67,10 @@ public class MessageActivity extends Activity
 	public TransportData sendData=new TransportData();
 	public TransportData receivedData =null;
 	public Intent intent=null;
-
+	private myApplication mAPP = null;   
+    private MyHandler mHandler = null;
+    private SQLiteDatabase SqlDB;
+    private mySQLiteHelper mySqlHelper;
 	private void init() 
 	{
 		
@@ -89,7 +97,9 @@ public class MessageActivity extends Activity
 		};
 		getApplicationContext().bindService(reciveIntent, conn,Context.BIND_AUTO_CREATE);
 		                                                    // 绑定服务，创建一个长期存在的连接
-
+		  //创建数据库message.db
+        mySqlHelper=new mySQLiteHelper(this,"message.db",null,1);
+		SqlDB=mySqlHelper.getWritableDatabase();	
 	}
 
 	@Override
@@ -97,6 +107,8 @@ public class MessageActivity extends Activity
 	{
 		intent=getIntent();  //实现当前Activity的和Main之间的通信
 		updateHandler=new Handler();
+		mAPP = (myApplication) getApplication();  // 获得该共享变量实例                           
+        mHandler = mAPP.getHandler();
 		init();
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.send);
@@ -106,7 +118,9 @@ public class MessageActivity extends Activity
 		textMessage = (EditText) findViewById(R.id.textMessage);
 		sendButton.setOnClickListener(new sendButtonListener());// 为按钮添加监听器
 		textTotal.setMovementMethod(ScrollingMovementMethod.getInstance());
-		textTotal.setScrollbarFadingEnabled(false);                                                          
+		textTotal.setScrollbarFadingEnabled(false);  
+		//显示以前的聊天消息
+		queryData();
 		updateSend =new Runnable()
 		{
 			
@@ -114,6 +128,7 @@ public class MessageActivity extends Activity
 			{ 
 			    textTotal.append("me:     "+time+"\n");  
 			    textTotal.append(data +"\n");  
+			    insertData("me",time,data);
 			}
 			
 		};
@@ -128,6 +143,7 @@ public class MessageActivity extends Activity
 				{	
 		        textTotal.append(receivedIP+"     "+receivedData.time+"\n");
 		        textTotal.append(receivedData.data +"\n");
+		        insertData(receivedIP,receivedData.time,receivedData.data);
 				}
 				
 			}
@@ -138,13 +154,59 @@ public class MessageActivity extends Activity
 				
 				public void run()
 				{ 
-				 Toast.makeText(MessageActivity.this,"you have a new message",Toast.LENGTH_LONG ).show();
+				 Toast.makeText(MessageActivity.this,"you have a new message",Toast.LENGTH_SHORT ).show();
 				}
 				
 			};
+			
 	}
 	/**
-	 * 获取自己的IP
+	 * 数据库的插入操作
+	 */
+	public void insertData(String ip,String time,String content)
+	{
+		ContentValues values = new ContentValues(); 
+		values.put("ip", ip); 
+		values.put("time", time); 
+		values.put("content", content); 
+		SqlDB.insert("information", null, values); 
+	}
+	/**
+	 * 删除数据表中的数据
+	 */
+	public void deleteData() 
+	{ 
+	  String sql = "DELETE FROM information"; 
+	  SqlDB.execSQL(sql ); 
+	  //SqlDB.execSQL("drop table information");
+	} 
+	/**
+	 * 查找数据表中的所有数据，并显示到MessageActivity.
+	 * Cursor作为一个指针从数据库查询返回结果集
+	 */
+	public void queryData() 
+	{
+	  String ipAddress="";
+	  String oldTime="";
+	  String oldContent="";
+	  String sql = "SELECT * FROM information";
+	  Cursor cursor = SqlDB.rawQuery(sql,null); 
+	  cursor.moveToFirst(); 
+	  while (!cursor.isAfterLast()) 
+	  { 
+		ipAddress=cursor.getString(0); 
+	    oldTime=cursor.getString(1); 
+        oldContent=cursor.getString(2);
+        textTotal.append(ipAddress+"     "+oldTime+"\n");
+        textTotal.append(oldContent +"\n"); 
+        cursor.moveToNext(); 
+      } 
+	  cursor.close();
+	  
+	}
+	
+	/**
+	 * 获取自己的IP,并转换成“*.*.*.*”地址  
 	 * @return
 	 */
 	public String getIp()
@@ -197,10 +259,14 @@ public class MessageActivity extends Activity
 	   getApplicationContext().unbindService(conn);
 		stopService(reciveIntent);
 		sendMessage.shutdown();
+		//sendMessage.stop();
 		recieve.destroy();
+		//recieve.stop();
 		updateHandler.removeCallbacks(updateRecive);
 		updateHandler.removeCallbacks(updateSend);
-		
+		updateHandler.removeCallbacks(updateWarning);
+		deleteData() ;   //删除数据表中的所有数据
+		mySqlHelper.close();   //关闭数据库
     }
 
 	class sendButtonListener implements OnClickListener 
@@ -217,7 +283,7 @@ public class MessageActivity extends Activity
 		@Override
 		public void run() 
 		{
-			initRecive();                                  // 若rec=false则阻塞线程
+			initRecive();                    // 若rec=false则阻塞线程
 			while (rec == true)
 			{
 	
@@ -228,11 +294,17 @@ public class MessageActivity extends Activity
 					//System.out.println("收到的发来的消息" + receivedMessages);
 					updateHandler.post(updateRecive);
 					String IP="/"+getIp();
-					if(!receivedIP.equals(IP))  //不接收自己发出的信息
-					{	
-					updateHandler.post(updateWarning);
-					}
-				    }
+				    if(!receivedIP.equals(IP))  //不接收自己发出的信息
+					  {	//****一种收到信息提示的方法
+					    updateHandler.post(updateWarning);
+				        //***另一种收到信息提示的方法，用到了application,不论是Main,还是MessagyActivity都显示
+					   /* Message msg=mHandler.obtainMessage();
+					    msg.what=1;
+					    mHandler.sendMessage(msg);*/
+					
+					  }
+				
+				   }
 			
 				try {
 					Thread.sleep(1000);
