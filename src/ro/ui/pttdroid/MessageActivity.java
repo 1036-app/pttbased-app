@@ -53,63 +53,20 @@ public class MessageActivity extends Activity
 	public String data = null;
 	public String dataEnd = null;
 	public byte[] messages = null;
-	public ReciveBinder recivebinder = null;
-	public ServiceConnection conn = null;
 	public Runnable updateRecive=null;
 	public Runnable updateSend=null;
-	
-	public Runnable updateWarning=null;
-	public Recieve recieve = null;
-	public boolean rec = false;
-	public String receivedIP = "";
-    public Handler updateHandler; 
     public String time=null;
 	public TransportData sendData=new TransportData();
-	public TransportData receivedData =null;
 	public Intent intent=null;
 	private myApplication mAPP = null;   
     private MyHandler mHandler = null;
-    private SQLiteDatabase SqlDB;
-    private mySQLiteHelper mySqlHelper;
-	private void init() 
-	{
-		
-		sendMessage = new SendMessage();
-		sendMessage.start();
-		recieve = new Recieve();
-		recieve.start();
-		reciveIntent = new Intent(MessageActivity.this, ReciveMessage.class);
-		conn = new ServiceConnection() 
-		{
-			                                                // 建立链接时调用的函数
-			public void onServiceConnected(ComponentName name,IBinder reciveBinder) 
-			{
-
-				recivebinder = (ReciveBinder) reciveBinder; // 获取服务端的reciveBinder，以便与服务端通信
-				recieve.resumRecive();                      // 唤醒处理接收到短息的线程
-			}
-                                                           // 断开连接时调用的函数
-			public void onServiceDisconnected(ComponentName arg0) 
-			{
-				recivebinder = null;
-				recieve.pauseRecive();
-			}
-		};
-		getApplicationContext().bindService(reciveIntent, conn,Context.BIND_AUTO_CREATE);
-		                                                    // 绑定服务，创建一个长期存在的连接
-		  //创建数据库message.db
-        mySqlHelper=new mySQLiteHelper(this,"message.db",null,1);
-		SqlDB=mySqlHelper.getWritableDatabase();	
-	}
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) 
 	{
 		intent=getIntent();  //实现当前Activity的和Main之间的通信
-		updateHandler=new Handler();
 		mAPP = (myApplication) getApplication();  // 获得该共享变量实例                           
         mHandler = mAPP.getHandler();
-		init();
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.send);
 		sendButton = (Button) findViewById(R.id.sendButton);
@@ -119,116 +76,55 @@ public class MessageActivity extends Activity
 		sendButton.setOnClickListener(new sendButtonListener());// 为按钮添加监听器
 		textTotal.setMovementMethod(ScrollingMovementMethod.getInstance());
 		textTotal.setScrollbarFadingEnabled(false);  
-		//显示以前的聊天消息
-		queryData();
+		//显示以前的聊天消息读数据库,包括回到Main时保存的信息
+		Main.mySqlHelper.queryData(Main.SqlDB, textTotal);
+		Main.messageList.clear();
+		sendMessage=new SendMessage();
+		sendMessage.start();
 		updateSend =new Runnable()
 		{
 			
 			public void run()
 			{ 
 			    textTotal.append("me:     "+time+"\n");  
-			    textTotal.append(data +"\n");  
-			    insertData("me",time,data);
+			    textTotal.append(data +"\n"); 
+			    //插入数据库
+			    Main.mySqlHelper.insertData(Main.SqlDB,"me",time,data);
 			}
 			
 		};
-		
+		//聊天过程中及时收到的消息
 		updateRecive =new Runnable()
 		{
 			public void run()
 			{
-				
-				String IP="/"+getIp();
-				if(!receivedIP.equals(IP))  //不接收自己发出的信息
-				{	
-		        textTotal.append(receivedIP+"     "+receivedData.time+"\n");
-		        textTotal.append(receivedData.data +"\n");
-		        insertData(receivedIP,receivedData.time,receivedData.data);
+				for(int i=0;i<Main.messageList.size();i++)
+				{
+					textTotal.append(Main.messageList.get(i).ipaddress+"     "+Main.messageList.get(i).time+"\n");
+					textTotal.append(Main.messageList.get(i).data +"\n");
 				}
+				Main.messageList.clear();
+				
+				
 				
 			}
 			
 		};
-		   updateWarning =new Runnable() 
-			{
-				
-				public void run()
-				{ 
-				 Toast.makeText(MessageActivity.this,"you have a new message",Toast.LENGTH_SHORT ).show();
-				}
-				
-			};
 			
 	}
-	/**
-	 * 数据库的插入操作
-	 */
-	public void insertData(String ip,String time,String content)
+	@Override
+	protected void onResume()
 	{
-		ContentValues values = new ContentValues(); 
-		values.put("ip", ip); 
-		values.put("time", time); 
-		values.put("content", content); 
-		SqlDB.insert("information", null, values); 
+		super.onResume();
 	}
-	/**
-	 * 删除数据表中的数据
-	 */
-	public void deleteData() 
-	{ 
-	  String sql = "DELETE FROM information"; 
-	  SqlDB.execSQL(sql ); 
-	  //SqlDB.execSQL("drop table information");
-	} 
-	/**
-	 * 查找数据表中的所有数据，并显示到MessageActivity.
-	 * Cursor作为一个指针从数据库查询返回结果集
-	 */
-	public void queryData() 
+	@Override
+	protected void onPause()
 	{
-	  String ipAddress="";
-	  String oldTime="";
-	  String oldContent="";
-	  String sql = "SELECT * FROM information";
-	  Cursor cursor = SqlDB.rawQuery(sql,null); 
-	  cursor.moveToFirst(); 
-	  while (!cursor.isAfterLast()) 
-	  { 
-		ipAddress=cursor.getString(0); 
-	    oldTime=cursor.getString(1); 
-        oldContent=cursor.getString(2);
-        textTotal.append(ipAddress+"     "+oldTime+"\n");
-        textTotal.append(oldContent +"\n"); 
-        cursor.moveToNext(); 
-      } 
-	  cursor.close();
-	  
+		sendMessage.shutdown();
+		mHandler.removeCallbacks(updateRecive);
+		mHandler.removeCallbacks(updateSend);
+		super.onPause();
 	}
-	
-	/**
-	 * 获取自己的IP,并转换成“*.*.*.*”地址  
-	 * @return
-	 */
-	public String getIp()
-	{  
-	    WifiManager wm=(WifiManager)getSystemService(Context.WIFI_SERVICE);  
-	    if(!wm.isWifiEnabled())                     //检查Wifi状态     
-	     wm.setWifiEnabled(true);  
-	    WifiInfo wi=wm.getConnectionInfo();        //获取32位整型IP地址     
-	    int IpAdd=wi.getIpAddress(); 
-	   // System.out.println("sssssssssss"+IpAdd);
-	    String Ip=intToIp(IpAdd);                 //把整型地址转换成“*.*.*.*”地址  
-	   // System.out.println("sssdddddd"+Ip);
-	    return Ip; 
-	   
-	}  
-	private String intToIp(int IpAdd) 
-	{  
-	    return (IpAdd & 0xFF ) + "." +  
-	    ((IpAdd >> 8 ) & 0xFF) + "." +  
-	    ((IpAdd >> 16 ) & 0xFF) + "." +  
-	    ( IpAdd >> 24 & 0xFF) ;  
-	}   
 
 	/**
 	 * 为程序设置菜单，菜单具体内容来自res/menu/menu.xml文件
@@ -256,17 +152,9 @@ public class MessageActivity extends Activity
 
 	protected void Destroy()
 	{
-	   getApplicationContext().unbindService(conn);
-		stopService(reciveIntent);
 		sendMessage.shutdown();
-		//sendMessage.stop();
-		recieve.destroy();
-		//recieve.stop();
-		updateHandler.removeCallbacks(updateRecive);
-		updateHandler.removeCallbacks(updateSend);
-		updateHandler.removeCallbacks(updateWarning);
-		deleteData() ;   //删除数据表中的所有数据
-		mySqlHelper.close();   //关闭数据库
+		mHandler.removeCallbacks(updateRecive);
+		mHandler.removeCallbacks(updateSend);
     }
 
 	class sendButtonListener implements OnClickListener 
@@ -278,73 +166,7 @@ public class MessageActivity extends Activity
 		}
 	}
 	
-	public class Recieve extends Thread 
-	{
-		@Override
-		public void run() 
-		{
-			initRecive();                    // 若rec=false则阻塞线程
-			while (rec == true)
-			{
 	
-				if (recivebinder.getMessages() !=null&& receivedData != recivebinder.getMessages()) 
-				   {
-					receivedData = recivebinder.getMessages();
-					receivedIP = recivebinder.getIP();
-					//System.out.println("收到的发来的消息" + receivedMessages);
-					updateHandler.post(updateRecive);
-					String IP="/"+getIp();
-				    if(!receivedIP.equals(IP))  //不接收自己发出的信息
-					  {	//****一种收到信息提示的方法
-					    updateHandler.post(updateWarning);
-				        //***另一种收到信息提示的方法，用到了application,不论是Main,还是MessagyActivity都显示
-					   /* Message msg=mHandler.obtainMessage();
-					    msg.what=1;
-					    mHandler.sendMessage(msg);*/
-					
-					  }
-				
-				   }
-			
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) 
-				{
-					e.printStackTrace();
-				}
-				
-			}
-		}
-
-		public synchronized void initRecive() 
-		{
-			try {
-				wait();
-			} catch (InterruptedException e1) 
-			{
-				e1.printStackTrace();
-			}
-		}
-
-		public synchronized void resumRecive()
-		{
-			rec = true;
-			notify();
-		}
-
-		public synchronized void pauseRecive() 
-		{
-			rec = false;
-
-		}
-
-		@Override
-		public void destroy()
-		{
-			pauseRecive();
-		}
-	}
-
 	public class SendMessage extends Thread
 	{
 		private DatagramPacket packet = null;
@@ -358,31 +180,30 @@ public class MessageActivity extends Activity
 			android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
 
 			while (isRunning())
-			{    
+			{   
+				if(!Main.messageList.isEmpty())
+			     {
+				    mHandler.post(updateRecive);
+				    
+			     }
 				if (isSending())
 				{
 					try {
 						init();
-						//System.out.println("发出的数据:" + packet.getData());
+						//System.out.println("发出的数据:" + packet.getData().toString());
 						socket.send(packet);
-						updateHandler.post(updateSend);
+						mHandler.post(updateSend);
 					} catch (IOException e) 
 					{
 						Log.error(getClass(), e);
 					}
-					
+					sending=false;
 				}
-				
-				synchronized (this) 
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) 
 				{
-					try 
-					{
-						if (isRunning())
-							wait();
-					} catch (InterruptedException e)
-					{
-						Log.error(getClass(), e);
-					}
+					e.printStackTrace();
 				}
 			}
 			if (socket != null)
@@ -410,20 +231,13 @@ public class MessageActivity extends Activity
 					 break;
 				}
 				data = textMessage.getText().toString();
-				//System.out.println("发出的短信" + data);
 				SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd   HH:mm:ss");     
 				Date curDate=new Date(System.currentTimeMillis());
 				time=formatter.format(curDate); 
 				sendData.data=data;
 				sendData.time=time;
-				/*try {
-					                                   
-					messages = data.getBytes("UTF8");// 将string类型的数据转换为byte[]类型的
-					
-				} catch (UnsupportedEncodingException e)
-				{
-					e.printStackTrace();
-				}*/
+			    sendData.ipaddress="me";
+	
 			try {  
 		            ByteArrayOutputStream baos = new ByteArrayOutputStream();  
 		            ObjectOutputStream oos = new ObjectOutputStream(baos);  
@@ -436,8 +250,6 @@ public class MessageActivity extends Activity
 		        {   
 		            e.printStackTrace();  
 		        }   
-
-
 		     // packet = new DatagramPacket(messages, messages.length, addr, CommSettings.getPort());
 				packet = new DatagramPacket(messages, messages.length, addr,40000);
 			
@@ -470,14 +282,12 @@ public class MessageActivity extends Activity
 		public synchronized void resumeMessage() 
 		{
 			sending = true;
-			notify();
 		}
 
 		public synchronized void shutdown() 
 		{
 			pauseMessage();
 			running = false;
-			notify();
 			if(socket!=null)
 			  socket.close();
 		}

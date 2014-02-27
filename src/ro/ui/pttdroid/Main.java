@@ -17,9 +17,9 @@ along with pttdroid.  If not, see <http://www.gnu.org/licenses/>. */
 
 package ro.ui.pttdroid;
 
-import java.io.Serializable;
-
+import java.util.ArrayList;
 import ro.ui.pttdroid.Player.PlayerBinder;
+import ro.ui.pttdroid.ReciveMessage.ReciveBinder;
 import ro.ui.pttdroid.codecs.Speex;
 import ro.ui.pttdroid.settings.AudioSettings;
 import ro.ui.pttdroid.settings.CommSettings;
@@ -32,7 +32,8 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.database.sqlite.SQLiteDatabase;
 import android.media.AudioManager;
-import android.net.Uri;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -56,7 +57,16 @@ public class Main extends Activity
     private static Intent 		playerIntent;
     private MyHandler handler=null;
     private myApplication mAPP=null;
-   
+    public TransportData receivedData =null;
+    public ReciveBinder recivebinder = null;
+    public Recieve recieve = null;
+    public static SQLiteDatabase SqlDB;
+    public static mySQLiteHelper mySqlHelper;
+    public static Intent reciveIntent;
+    public ServiceConnection conn = null;
+    public String receivedIP = "";
+    public static ArrayList<TransportData>messageList=new ArrayList<TransportData>();
+    public Runnable updateWarning=null;
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -66,8 +76,16 @@ public class Main extends Activity
         mAPP.setHandler(handler);
         setContentView(R.layout.main);           
         init();  
-      
-       
+        conn();
+          updateWarning =new Runnable() 
+		{
+			
+			public void run()
+			{ 
+			 Toast.makeText(Main.this,"you have a new message",Toast.LENGTH_SHORT ).show();
+			}
+			
+		}; 
     }
     
     @Override
@@ -147,8 +165,6 @@ public class Main extends Activity
         @Override  
         public void handleMessage(Message msg) 
         {  
-        	//if(msg.what==1)
-        	//Toast.makeText(Main.this,"you have a new message",Toast.LENGTH_SHORT ).show();
             super.handleMessage(msg);  
  
         }  
@@ -165,20 +181,53 @@ public class Main extends Activity
             startService(playerIntent);             //启动player服务         
     		recorder = new Recorder();
     		recorder.start();     		    		   		
-    		firstLaunch = false;    		
+    		firstLaunch = false;    
+    			
     	}
     	
 		microphoneSwitcher = new MicrophoneSwitcher();
 		microphoneSwitcher.init();
     }
-    
+    private void conn()
+    {
+    	
+		recieve = new Recieve();
+	    recieve.start();
+		reciveIntent = new Intent(Main.this, ReciveMessage.class);
+		conn = new ServiceConnection() 
+		{
+			                                                // 建立链接时调用的函数
+			public void onServiceConnected(ComponentName name,IBinder reciveBinder) 
+			{
+
+				recivebinder = (ReciveBinder) reciveBinder; // 获取服务端的reciveBinder，以便与服务端通信
+				recieve.resumRecive();                      // 唤醒处理接收到短息的线程
+			}
+                                                           // 断开连接时调用的函数
+			public void onServiceDisconnected(ComponentName arg0) 
+			{
+				recivebinder = null;
+				recieve.pauseRecive();
+			}
+		};
+		getApplicationContext().bindService(reciveIntent, conn,Context.BIND_AUTO_CREATE);
+		                                                    // 绑定服务，创建一个长期存在的连接
+		//创建数据库message.db
+        mySqlHelper=new mySQLiteHelper(this,"message.db",null,1);
+		SqlDB=mySqlHelper.getWritableDatabase();		  
+    }
     private void shutdown() 
     {    	  
     	
     	firstLaunch = true;    	
     	stopService(playerIntent);
+    	getApplicationContext().unbindService(conn);
+		stopService(reciveIntent);
+		recieve.destroy();
     	recorder.shutdown();    		
-        Speex.close();                   
+        Speex.close();
+        mySqlHelper.deleteData(SqlDB) ;   //删除数据表中的所有数据
+		mySqlHelper.close();             //关闭数据库                  
         finish();
     }     
     
@@ -297,5 +346,96 @@ public class Main extends Activity
 		}
 		
 	};
-        
+	/**
+	 * 接收信息的线程
+	 * @author PC
+	 *
+	 */
+	
+	public class Recieve extends Thread 
+	{
+		public boolean rec=false;
+		@Override
+		public void run() 
+		{
+			initRecive();                    // 若rec=false则阻塞线程
+			while (rec == true)
+			{
+				
+				if (recivebinder.getMessages() !=null&& receivedData != recivebinder.getMessages()) 
+				   {
+					receivedData = recivebinder.getMessages();
+					receivedIP = recivebinder.getIP();
+				
+					String IP="/"+getIp();
+				    if(!receivedIP.equals(IP))  //不接收自己发出的信息
+					  {		
+				    	messageList.add(receivedData);
+				    	mySqlHelper.insertData(SqlDB,receivedData.ipaddress,receivedData.time,receivedData.data);
+				    	handler.post(updateWarning);  //提示收到新的消息
+					  }
+				
+				   }
+			
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) 
+				{
+					e.printStackTrace();
+				}
+				
+			}
+		}
+
+		public synchronized void initRecive() 
+		{
+			try {
+				wait();
+			} catch (InterruptedException e1) 
+			{
+				e1.printStackTrace();
+			}
+		}
+
+		public synchronized void resumRecive()
+		{
+			rec = true;
+			notify();
+		}
+
+		public synchronized void pauseRecive() 
+		{
+			rec = false;
+
+		}
+
+		@Override
+		public void destroy()
+		{
+			pauseRecive();
+		}
+	}
+	/**
+	 * 获取自己的IP,并转换成“*.*.*.*”地址  
+	 * @return
+	 */
+	public String getIp()
+	{  
+	    WifiManager wm=(WifiManager)getSystemService(Context.WIFI_SERVICE);  
+	    if(!wm.isWifiEnabled())                     //检查Wifi状态     
+	     wm.setWifiEnabled(true);  
+	    WifiInfo wi=wm.getConnectionInfo();        //获取32位整型IP地址     
+	    int IpAdd=wi.getIpAddress(); 
+	    String Ip=intToIp(IpAdd);                 //把整型地址转换成“*.*.*.*”地址  
+	    return Ip; 
+	   
+	}  
+	private String intToIp(int IpAdd) 
+	{  
+	    return (IpAdd & 0xFF ) + "." +  
+	    ((IpAdd >> 8 ) & 0xFF) + "." +  
+	    ((IpAdd >> 16 ) & 0xFF) + "." +  
+	    ( IpAdd >> 24 & 0xFF) ;  
+	} 
+     
 }

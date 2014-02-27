@@ -28,11 +28,11 @@ public class ReciveMessage extends Service
 	private volatile boolean running = true;	
 	private volatile boolean playing = true;
 	public ShowMessage showMessage=null;
-	byte[]data=null;
-	public String messages="";
 	public InetAddress senderAddress = null;
 	public IBinder reciveBinder = new ReciveBinder();
 	public TransportData recieveData=null;
+	public byte[]data=null;
+	public String messages="";
 	@Override
 	public IBinder onBind(Intent intent) 
 	{
@@ -107,39 +107,34 @@ public class ReciveMessage extends Service
 		      data=new byte[256];
 			  packet=new DatagramPacket(data, data.length);
 		      socket.receive(packet); //接收信息数据包
-		 	  senderAddress=packet.getAddress();
+		       if(senderAddress!=packet.getAddress())
+		       {
+		 	    senderAddress=packet.getAddress();
 		 	  // 如果是发送数据包，则获得数据包要发送的目标地址，如果是接收数据包则返回发送此数据包的源地址。
-		 	 // System.out.println("接收到的数据"+packet.getData());
-		     }
-		   catch(SocketException e) 
-		    {
-			   break;
-		    }
-		   catch(IOException e) 
-		   {
-			Log.error(getClass(), e);
-		   }
-		   try {  
+		         try {  
 		         ByteArrayInputStream bais = new ByteArrayInputStream(packet.getData());  
 		         ObjectInputStream ois = new ObjectInputStream(bais);  
-		         recieveData = (TransportData)ois.readObject();  
+		         recieveData = (TransportData)ois.readObject(); 
 		         bais.close();  
 		         ois.close();  
+		         String s=senderAddress.toString();
+		         recieveData.ipaddress=s;
 		         }  
 		         catch(Exception e)
 		         {    
+		        	 System.out.println(e.toString());
 		             e.printStackTrace();  
 		         }   
-
-		  /* try 
-		   {
-			  messages = new String(packet.getData(),0,packet.getLength(),"utf-8");
-	        } 
-		   catch (IOException e) 
-		   {
-				e.printStackTrace();
-		   }
-		   */
+		       }
+		     }
+		      catch(SocketException e) 
+			    {
+				   break;
+			    }
+			   catch(IOException e) 
+			   {
+				Log.error(getClass(), e);
+			   }
 		 }
 		 synchronized(this)
 			{
@@ -164,10 +159,6 @@ public class ReciveMessage extends Service
 		socket=new DatagramSocket(40000);
 		}
 		catch(SocketException e)
-		{
-			Log.error(getClass(), e);
-		}
-		catch(IOException e)
 		{
 			Log.error(getClass(), e);
 		}
