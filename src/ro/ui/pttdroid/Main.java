@@ -17,7 +17,12 @@ along with pttdroid.  If not, see <http://www.gnu.org/licenses/>. */
 
 package ro.ui.pttdroid;
 
+import java.io.File;
+import java.net.URI;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+
 import ro.ui.pttdroid.Player.PlayerBinder;
 import ro.ui.pttdroid.ReciveMessage.ReciveBinder;
 import ro.ui.pttdroid.codecs.Speex;
@@ -35,6 +40,7 @@ import android.media.AudioManager;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -67,6 +73,8 @@ public class Main extends Activity
     public String receivedIP = "";
     public static ArrayList<TransportData>messageList=new ArrayList<TransportData>();
     public Runnable updateWarning=null;
+    public static File  ExternalAudioFile=null; //存放语音文件的外部存储文件
+    public static File  internalAudioFile=null; //存放语音文件的内部存储文件
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -77,6 +85,30 @@ public class Main extends Activity
         setContentView(R.layout.main);           
         init();  
         conn();
+        //创建文件夹存放语音文件  
+        SimpleDateFormat formatter= new SimpleDateFormat("yyyyMMdd-HH-mm-ss");     
+		Date curDate=new Date(System.currentTimeMillis());
+		String time=formatter.format(curDate);
+        String status = Environment.getExternalStorageState();
+        if (status.equals(Environment.MEDIA_MOUNTED)) //判断sdcard是否插入
+        {
+         String SDPATH=Environment.getExternalStorageDirectory().toString();
+ 		 ExternalAudioFile=new File(SDPATH,time);
+ 		 System.out.println("已经创建了外部存储文件"+SDPATH+"/"+time);
+ 		//System.out.println("文件名"+ExternalAudioFile.getName());
+ 		//System.out.println("文件名"+ExternalAudioFile.getAbsolutePath());
+        }
+        else                               // 存到手机内部存储里 
+        {
+        	 String filepath=getFilesDir().toString();
+        	internalAudioFile = new File(filepath,time);
+        	System.out.println("内部存储"+filepath+"/"+time); 
+        	//删除内部语音文件
+        	//new File("/data/data/ro.ui.pttdroid/database","message.db").delete();
+        	//new File(filepath,"20140228-17-10-32").delete();
+        	 
+        }
+     
           updateWarning =new Runnable() 
 		{
 			
@@ -122,6 +154,10 @@ public class Main extends Activity
     		i = new Intent(this, MessageActivity.class); 
 			startActivityForResult(i, 0); 
             return true;
+    	case R.id.searchAudio:
+    		i = new Intent(this, SearchAudioFiles.class); 
+			startActivityForResult(i, 0);
+			return true;
     	case R.id.settings_comm:
     		i = new Intent(this, CommSettings.class); //若用户选择了communication 这一项，则跳到CommSettingsActivity
     		startActivityForResult(i, 0);    	      //能返回到之前的Activity	
@@ -212,10 +248,14 @@ public class Main extends Activity
 		};
 		getApplicationContext().bindService(reciveIntent, conn,Context.BIND_AUTO_CREATE);
 		                                                    // 绑定服务，创建一个长期存在的连接
-		//创建数据库message.db
-        mySqlHelper=new mySQLiteHelper(this,"message.db",null,1);
-		SqlDB=mySqlHelper.getWritableDatabase();		  
+		//创建数据库message.db	
+        mySqlHelper=new mySQLiteHelper(this,"messs.db",null,1);
+		SqlDB=mySqlHelper.getWritableDatabase();	
+		
     }
+    /**
+     * 
+     */
     private void shutdown() 
     {    	  
     	
@@ -227,7 +267,17 @@ public class Main extends Activity
     	recorder.shutdown();    		
         Speex.close();
         mySqlHelper.deleteData(SqlDB) ;   //删除数据表中的所有数据
-		mySqlHelper.close();             //关闭数据库                  
+        //mySqlHelper.deleteAudioData(SqlDB);
+       // SqlDB.execSQL("drop table AudioData");
+		if (ExternalAudioFile!=null&&ExternalAudioFile.length()!=0)
+			mySqlHelper.inserAudiotData(SqlDB,ExternalAudioFile.getName(), ExternalAudioFile.getAbsolutePath(),"W");
+		else if(ExternalAudioFile!=null&&ExternalAudioFile.length()==0)
+			ExternalAudioFile.delete();
+		if (internalAudioFile!=null&&internalAudioFile.length()!=0)
+			mySqlHelper.inserAudiotData(SqlDB,internalAudioFile.getName(), internalAudioFile.getAbsolutePath(),"N");
+		else if(internalAudioFile!=null&&internalAudioFile.length()==0)
+			internalAudioFile.delete();
+		mySqlHelper.close();    
         finish();
     }     
     

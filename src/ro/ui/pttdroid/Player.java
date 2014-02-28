@@ -17,11 +17,18 @@ along with pttdroid.  If not, see <http://www.gnu.org/licenses/>. */
 
 package ro.ui.pttdroid;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.SocketException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import ro.ui.pttdroid.codecs.Speex;
@@ -42,6 +49,7 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
+import android.text.format.Time;
 
 public class Player extends Service
 {
@@ -113,7 +121,8 @@ public class Player extends Service
 		private volatile boolean playing = true;
 		private DatagramSocket 	socket;		
 		private DatagramPacket 	packet;	
-		private short[] pcmFrame = new short[Audio.FRAME_SIZE];
+		private short[] pcmFrame =null; 
+		private short[] Frame =null; 
 		private byte[] 	encodedFrame;
 		                        //AtomicInteger，一个提供原子操作的Integer的类。
 		private AtomicInteger progress = new AtomicInteger(0);//设定初始值为0
@@ -139,25 +148,55 @@ public class Player extends Service
 					{
 						Log.error(getClass(), e);
 					}					
-                                               //若用户设定为没有回音，且能找到对方的IP地址
+                     Frame =new short[Audio.FRAME_SIZE];                          //若用户设定为没有回音，且能找到对方的IP地址
 					if(AudioSettings.getEchoState()==AudioSettings.ECHO_OFF && IP.contains(packet.getAddress()))
 						continue;
 					if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) //用户选择了默认的值（自己选择码率）
 					{
 						Speex.decode(encodedFrame, encodedFrame.length, pcmFrame);//音频解码，结果放到pcmFrame中
+						
 						player.write(pcmFrame, 0, Audio.FRAME_SIZE);//把音频数据写到player中
 					}
 					else 
 					{			
 						player.write(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
-						                             //第一个参数，音频数据，第二个参数，偏移量，即从哪开始，第三个参数，数据大小
-					}	
+					                          //第一个参数，音频数据，第二个参数，偏移量，即从哪开始，第三个参数，数据大小
+					}
+					
+					/*if(Frame!=null&&Frame!=pcmFrame)
+					{
+						Frame=pcmFrame;
+						SimpleDateFormat formatter= new SimpleDateFormat("yyyyMMdd-HH-mm-ss");     
+						Date curDate=new Date(System.currentTimeMillis());
+						String time=formatter.format(curDate);
+						Main.mySqlHelper.inserAudiotData(Main.SqlDB ,time, Frame);
+					}*/
+					if(Main.ExternalAudioFile!=null)
+					 {
+					  try {
+					     saveToSDCard(Main.ExternalAudioFile,encodedFrame);
+					     System.out.println("存到外部存储卡里");
+					   } catch (Exception e)
+					   {
+				         e.printStackTrace();
+					   }
+					 } 
+					 else
+						 if(Main.internalAudioFile!=null)
+						 {
+							 try {
+								saveToSDCard(Main.internalAudioFile,encodedFrame);
+								System.out.println("存到内部存储卡里"); 
+							} catch (Exception e) 
+							{
+								e.printStackTrace();
+							}	     
+						 }
 					progress.incrementAndGet();      //自增加1并获取该值
 				}
 
 				player.stop();
 				player.release();
-				
 				synchronized(this)
 				{
 					try 
@@ -170,6 +209,7 @@ public class Player extends Service
 						Log.error(getClass(), e);
 					}
 				}
+				
 			}			
 		}
 		
@@ -184,7 +224,7 @@ public class Player extends Service
 						Audio.ENCODING_PCM_NUM_BITS, 
 						Audio.TRACK_BUFFER_SIZE, 
 						AudioTrack.MODE_STREAM);	
-
+				pcmFrame =new short[Audio.FRAME_SIZE];
 				switch(CommSettings.getCastType()) 
 				{
 					case CommSettings.BROADCAST:
@@ -273,5 +313,12 @@ public class Player extends Service
 		}
 		
 	}
-			
+	//将音频文件存入数据库
+    public void saveToSDCard(File file ,byte[]content) throws Exception 
+	 {
+	    FileOutputStream outStream = new FileOutputStream(file);
+		outStream.write(content);
+		outStream.flush();
+		outStream.close();
+	}		
 }

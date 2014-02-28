@@ -17,6 +17,8 @@ along with pttdroid.  If not, see <http://www.gnu.org/licenses/>. */
 
 package ro.ui.pttdroid;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -32,6 +34,7 @@ import ro.ui.pttdroid.util.Log;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder.AudioSource;
+import android.os.Environment;
 
 public class Recorder extends Thread
 {	
@@ -60,6 +63,7 @@ public class Recorder extends Thread
 				else
 				{
 					recorder.read(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
+				
 				}
 				try 
 				{																				 
@@ -161,5 +165,6 @@ public class Recorder extends Thread
 		running = false;				
 		notify();
 	}
-		
+	
+	
 }

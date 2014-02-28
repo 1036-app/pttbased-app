@@ -11,7 +11,10 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission>
     <uses-permission android:name="android.permission.WAKE_LOCK"></uses-permission>
-    
+    <!-- 在SDCard中创建和删除文件的权限 -->
+     <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>
+    <!-- 往SDCard中写入数据的权限 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <application 
         android:name=".myApplication"
         android:icon="@drawable/icon" 
@@ -44,6 +47,12 @@
         <activity 
             android:name=".MessageActivity" 
             android:label="@string/Sendmessage_name" 
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:screenOrientation="portrait">        	
+        </activity>
+         <activity 
+            android:name=".SearchAudioFiles" 
+            android:label="@string/SearchAudio_name" 
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
             android:screenOrientation="portrait">        	
         </activity>

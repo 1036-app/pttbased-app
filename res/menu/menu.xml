@@ -16,6 +16,10 @@
 		    android:icon="@drawable/send"
 		android:title="@string/send_label">
 	</item>
+	<item android:id="@+id/searchAudio"
+		android:icon="@drawable/icon"
+		android:title="@string/search_label">
+	</item>
 	<item android:id="@+id/quit"
 		android:icon="@drawable/quit_icon"
 		android:title="@string/quit_label">
