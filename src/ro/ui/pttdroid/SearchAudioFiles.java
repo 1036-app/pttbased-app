@@ -83,7 +83,6 @@ public class SearchAudioFiles extends ListActivity
 			try {
 				short[] pcmFrame =new short[Audio.FRAME_SIZE];
 				byte[] array = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];
-				System.out.println("fgfdgfdghfdhfd  "+mySQLiteHelper.SelectedPlace);
 				if(mySQLiteHelper.SelectedPlace.equals("W"))
 				{
 				String SDPATH=Environment.getExternalStorageDirectory().toString();
@@ -117,13 +116,13 @@ public class SearchAudioFiles extends ListActivity
 				//for(int i=0;i<array.length;i++)
 				//	System.out.println("array"+array[i]);
 				//for(int i=0;i<pcmFrame.length;i++)
-			    //   System.out.println("pcmFrame"+pcmFrame[i]);
+			   //  System.out.println("pcmFrame"+pcmFrame[i]);
 	 		} catch (IOException e) 
 	 		{
 	 			
 	 			e.printStackTrace();
 	 		} 
-			System.out.println("¶ÁÓïÒô");
+			//System.out.println("¶ÁÓïÒô");
 	 		player.stop();
 	 		player.release();
 			}

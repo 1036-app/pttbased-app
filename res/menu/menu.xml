@@ -12,17 +12,22 @@
 				android:title="@string/settings_reset_all_label" />				
 		</menu>		
 	</item>
-		<item android:id="@+id/send"
+	<item android:id="@+id/send"
 		    android:icon="@drawable/send"
 		android:title="@string/send_label">
-	</item>
+	  </item>
 	<item android:id="@+id/searchAudio"
-		android:icon="@drawable/icon"
-		android:title="@string/search_label">
+		  android:icon="@drawable/icon"
+		  android:title="@string/search_label">
+	</item>
+	
+	<item android:id="@+id/googlemap"
+		  android:icon="@drawable/common_signin_btn_icon_light"
+	      android:title="@string/map_label">
 	</item>
 	<item android:id="@+id/quit"
 		android:icon="@drawable/quit_icon"
 		android:title="@string/quit_label">
 	</item>
-
+   
 </menu>

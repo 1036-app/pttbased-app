@@ -174,8 +174,9 @@ public class Player extends Service
 					if(Main.ExternalAudioFile!=null)
 					 {
 					  try {
-					     saveToSDCard(Main.ExternalAudioFile,encodedFrame);
-					     System.out.println("存到外部存储卡里");
+						  Main.outStream.write(encodedFrame);
+					    // System.out.println("存到外部存储卡里");
+					    
 					   } catch (Exception e)
 					   {
 				         e.printStackTrace();
@@ -185,8 +186,8 @@ public class Player extends Service
 						 if(Main.internalAudioFile!=null)
 						 {
 							 try {
-								saveToSDCard(Main.internalAudioFile,encodedFrame);
-								System.out.println("存到内部存储卡里"); 
+								 Main.outStream.write(encodedFrame);
+							//	System.out.println("存到内部存储卡里"); 
 							} catch (Exception e) 
 							{
 								e.printStackTrace();
@@ -313,12 +314,4 @@ public class Player extends Service
 		}
 		
 	}
-	//将音频文件存入数据库
-    public void saveToSDCard(File file ,byte[]content) throws Exception 
-	 {
-	    FileOutputStream outStream = new FileOutputStream(file);
-		outStream.write(content);
-		outStream.flush();
-		outStream.close();
-	}		
 }

@@ -18,6 +18,9 @@ along with pttdroid.  If not, see <http://www.gnu.org/licenses/>. */
 package ro.ui.pttdroid;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -75,6 +78,7 @@ public class Main extends Activity
     public Runnable updateWarning=null;
     public static File  ExternalAudioFile=null; //存放语音文件的外部存储文件
     public static File  internalAudioFile=null; //存放语音文件的内部存储文件
+    public static FileOutputStream outStream=null;
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -94,21 +98,32 @@ public class Main extends Activity
         {
          String SDPATH=Environment.getExternalStorageDirectory().toString();
  		 ExternalAudioFile=new File(SDPATH,time);
- 		 System.out.println("已经创建了外部存储文件"+SDPATH+"/"+time);
- 		//System.out.println("文件名"+ExternalAudioFile.getName());
- 		//System.out.println("文件名"+ExternalAudioFile.getAbsolutePath());
+ 		try {
+			
+ 		 outStream = new FileOutputStream(ExternalAudioFile);
+		} catch (FileNotFoundException e) 
+		{
+			e.printStackTrace();
+		}
+ 		 //System.out.println("已经创建了外部存储文件"+SDPATH+"/"+time);
         }
         else                               // 存到手机内部存储里 
         {
         	 String filepath=getFilesDir().toString();
         	internalAudioFile = new File(filepath,time);
-        	System.out.println("内部存储"+filepath+"/"+time); 
+        	try {
+				outStream = new FileOutputStream(internalAudioFile);
+			} catch (FileNotFoundException e) 
+			{
+				e.printStackTrace();
+			}
+        	//System.out.println("内部存储"+filepath+"/"+time); 
         	//删除内部语音文件
         	//new File("/data/data/ro.ui.pttdroid/database","message.db").delete();
         	//new File(filepath,"20140228-17-10-32").delete();
         	 
         }
-     
+       
           updateWarning =new Runnable() 
 		{
 			
@@ -152,6 +167,10 @@ public class Main extends Activity
     		return true;
     	case R.id.send:
     		i = new Intent(this, MessageActivity.class); 
+			startActivityForResult(i, 0); 
+            return true;
+     	case R.id.googlemap:
+    		i = new Intent(this, mapActivity.class); 
 			startActivityForResult(i, 0); 
             return true;
     	case R.id.searchAudio:
@@ -267,7 +286,7 @@ public class Main extends Activity
     	recorder.shutdown();    		
         Speex.close();
         mySqlHelper.deleteData(SqlDB) ;   //删除数据表中的所有数据
-        //mySqlHelper.deleteAudioData(SqlDB);
+       // mySqlHelper.deleteAudioData(SqlDB);
        // SqlDB.execSQL("drop table AudioData");
 		if (ExternalAudioFile!=null&&ExternalAudioFile.length()!=0)
 			mySqlHelper.inserAudiotData(SqlDB,ExternalAudioFile.getName(), ExternalAudioFile.getAbsolutePath(),"W");
@@ -279,6 +298,13 @@ public class Main extends Activity
 			internalAudioFile.delete();
 		mySqlHelper.close();    
         finish();
+        try {
+			outStream.flush();
+			outStream.close();
+		} catch (IOException e)
+		{
+			e.printStackTrace();
+		}
     }     
     
     private class PlayerServiceConnection implements ServiceConnection
