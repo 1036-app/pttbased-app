@@ -173,6 +173,10 @@ public class Main extends Activity
     		i = new Intent(this, mapActivity.class); 
 			startActivityForResult(i, 0); 
             return true;
+     	case R.id.baidumap:
+    		i = new Intent(this, baiduMap.class); 
+			startActivityForResult(i, 0); 
+            return true;
     	case R.id.searchAudio:
     		i = new Intent(this, SearchAudioFiles.class); 
 			startActivityForResult(i, 0);

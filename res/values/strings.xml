@@ -54,12 +54,14 @@
     <string name="return_label">return(close) </string>	
     
     
-    <string name="map_label">Google map</string>	
+    <string name="googlemap_label">Google map</string>
+    <string name="baidumap_label">baidu map</string>	
     <string name="quit_label">Quit</string>	
     <string name="search_label">Search Audio</string>
     <string name="Sendmessage_name">pttroid SendMessage</string>	
     <string name="SearchAudio_name">pttroid SearchAudio</string>
     <string name="mapActivity_name">pttroid Google map</string> 
+    <string name="baidumapActivity_name">pttroid baidu map</string>
     <string name="send_label">Send Message</string>	
     <string name="DefaultMessage">messasge</string>
     <string name="Listtitle">AudioFilesList</string>  

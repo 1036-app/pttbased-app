@@ -27,7 +27,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <!--   -->
-
+     <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
     <permission
         android:name="ro.ui.pttdroid.permission.MAPS_RECEIVE"
         android:protectionLevel="signature"/>
@@ -86,10 +86,17 @@
             android:label="@string/mapActivity_name" 
             android:screenOrientation="portrait">        	
         </activity>
-         
+         <activity 
+            android:name=".baiduMap" 
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="@string/baidumapActivity_name" 
+            android:screenOrientation="portrait">        	
+        </activity>
+
         <service android:name=".Player"></service>
         <service android:name=".ReciveMessage"></service>
-     
+  
+        
                         
 	</application>    
 
