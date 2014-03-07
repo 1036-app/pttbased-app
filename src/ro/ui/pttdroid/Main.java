@@ -31,6 +31,7 @@ import ro.ui.pttdroid.ReciveMessage.ReciveBinder;
 import ro.ui.pttdroid.codecs.Speex;
 import ro.ui.pttdroid.settings.AudioSettings;
 import ro.ui.pttdroid.settings.CommSettings;
+import ro.ui.pttdroid.util.Audio;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -76,9 +77,10 @@ public class Main extends Activity
     public String receivedIP = "";
     public static ArrayList<TransportData>messageList=new ArrayList<TransportData>();
     public Runnable updateWarning=null;
-    public static File  ExternalAudioFile=null; //存放语音文件的外部存储文件
-    public static File  internalAudioFile=null; //存放语音文件的内部存储文件
-    public static FileOutputStream outStream=null;
+    public static String SDPATH=null;
+    public static byte[] Frame=null;
+    public static String myIPAddres=null;
+  
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -89,40 +91,45 @@ public class Main extends Activity
         setContentView(R.layout.main);           
         init();  
         conn();
-        //创建文件夹存放语音文件  
-        SimpleDateFormat formatter= new SimpleDateFormat("yyyyMMdd-HH-mm-ss");     
-		Date curDate=new Date(System.currentTimeMillis());
-		String time=formatter.format(curDate);
+        myIPAddres="/"+getIp();
+        if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) 
+        	Frame = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];
+		else 
+			Frame = new byte[Audio.FRAME_SIZE_IN_BYTES];
+        String s="hello";
+        Frame=s.getBytes();
+        //for(int i=0;i<Frame.length;i++)
+		//	  Frame[i]=1;
         String status = Environment.getExternalStorageState();
         if (status.equals(Environment.MEDIA_MOUNTED)) //判断sdcard是否插入
         {
-         String SDPATH=Environment.getExternalStorageDirectory().toString();
- 		 ExternalAudioFile=new File(SDPATH,time);
- 		try {
-			
- 		 outStream = new FileOutputStream(ExternalAudioFile);
-		} catch (FileNotFoundException e) 
-		{
-			e.printStackTrace();
-		}
- 		 //System.out.println("已经创建了外部存储文件"+SDPATH+"/"+time);
+         SDPATH=Environment.getExternalStorageDirectory().toString();
         }
-        else                               // 存到手机内部存储里 
+        else                              
         {
-        	 String filepath=getFilesDir().toString();
-        	internalAudioFile = new File(filepath,time);
-        	try {
-				outStream = new FileOutputStream(internalAudioFile);
-			} catch (FileNotFoundException e) 
-			{
-				e.printStackTrace();
-			}
-        	//System.out.println("内部存储"+filepath+"/"+time); 
-        	//删除内部语音文件
-        	//new File("/data/data/ro.ui.pttdroid/database","message.db").delete();
-        	//new File(filepath,"20140228-17-10-32").delete();
-        	 
-        }
+         SDPATH=getFilesDir().toString(); // 存到手机内部存储里 
+        } 
+        	//下面的代码用来删除内部语音文件
+         //File fi=getFilesDir();
+       /*
+       // File fi=Environment.getExternalStorageDirectory();
+        	if (fi.isDirectory())
+        	{  
+                File[] childFile = fi.listFiles();  
+                if (childFile == null || childFile.length == 0)
+                {  
+                } 
+                else
+                {
+                	 for (File f : childFile)
+                     {  
+                       f.delete();  
+                     }  
+                }
+            } 
+         */ 
+        	
+       
        
           updateWarning =new Runnable() 
 		{
@@ -139,7 +146,7 @@ public class Main extends Activity
     public void onPause()
     {
     	super.onPause();
-    	recorder.pauseAudio();
+    	recorder.setRecordFalse();
     }
                    
     @Override
@@ -272,12 +279,12 @@ public class Main extends Activity
 		getApplicationContext().bindService(reciveIntent, conn,Context.BIND_AUTO_CREATE);
 		                                                    // 绑定服务，创建一个长期存在的连接
 		//创建数据库message.db	
-        mySqlHelper=new mySQLiteHelper(this,"messs.db",null,1);
+        mySqlHelper=new mySQLiteHelper(this,"mes.db",null,1);
 		SqlDB=mySqlHelper.getWritableDatabase();	
 		
     }
     /**
-     * 
+     * 关闭Acitivity调用的函数
      */
     private void shutdown() 
     {    	  
@@ -290,25 +297,10 @@ public class Main extends Activity
     	recorder.shutdown();    		
         Speex.close();
         mySqlHelper.deleteData(SqlDB) ;   //删除数据表中的所有数据
-       // mySqlHelper.deleteAudioData(SqlDB);
-       // SqlDB.execSQL("drop table AudioData");
-		if (ExternalAudioFile!=null&&ExternalAudioFile.length()!=0)
-			mySqlHelper.inserAudiotData(SqlDB,ExternalAudioFile.getName(), ExternalAudioFile.getAbsolutePath(),"W");
-		else if(ExternalAudioFile!=null&&ExternalAudioFile.length()==0)
-			ExternalAudioFile.delete();
-		if (internalAudioFile!=null&&internalAudioFile.length()!=0)
-			mySqlHelper.inserAudiotData(SqlDB,internalAudioFile.getName(), internalAudioFile.getAbsolutePath(),"N");
-		else if(internalAudioFile!=null&&internalAudioFile.length()==0)
-			internalAudioFile.delete();
+        //mySqlHelper.deleteAudioData(SqlDB); //删除音频数据
 		mySqlHelper.close();    
         finish();
-        try {
-			outStream.flush();
-			outStream.close();
-		} catch (IOException e)
-		{
-			e.printStackTrace();
-		}
+       
     }     
     
     private class PlayerServiceConnection implements ServiceConnection
@@ -447,8 +439,8 @@ public class Main extends Activity
 					receivedData = recivebinder.getMessages();
 					receivedIP = recivebinder.getIP();
 				
-					String IP="/"+getIp();
-				    if(!receivedIP.equals(IP))  //不接收自己发出的信息
+					//String IP="/"+getIp();
+				    if(!receivedIP.equals(myIPAddres))  //不接收自己发出的信息
 					  {		
 				    	messageList.add(receivedData);
 				    	mySqlHelper.insertData(SqlDB,receivedData.ipaddress,receivedData.time,receivedData.data);

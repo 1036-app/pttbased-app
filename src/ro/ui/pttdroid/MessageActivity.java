@@ -183,8 +183,7 @@ public class MessageActivity extends Activity
 			{   
 				if(!Main.messageList.isEmpty())
 			     {
-				    mHandler.post(updateRecive);
-				    
+				    mHandler.post(updateRecive);   
 			     }
 				if (isSending())
 				{
@@ -231,7 +230,7 @@ public class MessageActivity extends Activity
 					 break;
 				}
 				data = textMessage.getText().toString();
-				SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd   HH:mm:ss");     
+				SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd   HH:mm:ss:SSS");     
 				Date curDate=new Date(System.currentTimeMillis());
 				time=formatter.format(curDate); 
 				sendData.data=data;
@@ -241,7 +240,7 @@ public class MessageActivity extends Activity
 			try {  
 		            ByteArrayOutputStream baos = new ByteArrayOutputStream();  
 		            ObjectOutputStream oos = new ObjectOutputStream(baos);  
-		            oos.writeObject(sendData);  
+		            oos.writeObject(sendData);
 		            messages = baos.toByteArray();  
 		            baos.close();  
 		            oos.close();      

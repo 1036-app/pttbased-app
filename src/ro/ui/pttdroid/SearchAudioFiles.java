@@ -10,6 +10,7 @@ import java.util.ArrayList;
 
 import org.apache.http.util.EncodingUtils;
 
+import ro.ui.pttdroid.Main.MyHandler;
 import ro.ui.pttdroid.codecs.Speex;
 import ro.ui.pttdroid.settings.AudioSettings;
 import ro.ui.pttdroid.util.Audio;
@@ -22,11 +23,13 @@ import android.media.AudioTrack;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.ContextMenu;
+import android.view.Gravity;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
+import android.widget.Toast;
 
 public class SearchAudioFiles extends ListActivity
 {
@@ -34,9 +37,13 @@ public class SearchAudioFiles extends ListActivity
 	private AudioTrack 	player=null; //用来播放声音的
 	public PlayThread pt=null;
 	public String filename ="";
+	public Runnable updateWarning=null;
+	public boolean isRun=true;
+	public boolean is=true;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) 
 	{
+		
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.search);
 		list = new ArrayList<String>();
@@ -45,6 +52,7 @@ public class SearchAudioFiles extends ListActivity
 		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.audiolist,
                 R.id.file, list);
 		setListAdapter(adapter);
+	
 		
 	}
 
@@ -55,17 +63,38 @@ public class SearchAudioFiles extends ListActivity
 		
 		super.onListItemClick(l, v, position, id);
 	    filename=list.get(position);
-		Main.mySqlHelper.selectAudioData(Main.SqlDB, filename);
-		pt=new PlayThread (filename);
-		pt.start();
-		
+		//Main.mySqlHelper.selectAudioData(Main.SqlDB, filename);
+		File f=new File(Main.SDPATH,filename);//相当于只是见了引用，要真正创建，得调用 file.createNewFile()方法。
+		if(f.exists())
+		  { 
+		     if(player!=null&&player.getPlayState()==player.PLAYSTATE_PLAYING)
+		     {
+		      pt.stopThread();	
+		     }
+		     while(true)     //监听正在播放的语言什么时候结束
+		     {
+			  if(is==true)   //当上一段语音播放结束时，才可以播放下一段
+			  {
+		       pt=new PlayThread (f);
+		       pt.start();
+		       is=false;
+		       return;
+		      }
+		    }
+		  }
+		else
+		{
+			Toast toast=Toast.makeText(SearchAudioFiles.this,"The file has been deleted",Toast.LENGTH_SHORT );
+		    toast.setGravity(Gravity.CENTER, 0, 0);
+		    toast.show();
+		}
 	}
 	public class PlayThread extends Thread
 	{
-        private String name;
-		PlayThread(String fname)
+        private File file;
+		PlayThread(File f)
 		{
-			name=fname;
+			file=f;
 		}
 		@Override
 		public void run() 
@@ -82,90 +111,57 @@ public class SearchAudioFiles extends ListActivity
 			player.play();
 			try {
 				short[] pcmFrame =new short[Audio.FRAME_SIZE];
-				byte[] array = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];
-				if(mySQLiteHelper.SelectedPlace.equals("W"))
-				{
-				String SDPATH=Environment.getExternalStorageDirectory().toString();
-				File file = new File(SDPATH,name);
+				byte[] array = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];	
 				FileInputStream fin = new FileInputStream(file);
-				ByteArrayOutputStream bos = new ByteArrayOutputStream();
-				int len = -1;
 				fin.read(array);
-				  while(true)
+				isRun=true;
+				  while(isRun)
 				    {
 					  Speex.decode(array, array.length, pcmFrame);
 					  player.write(pcmFrame, 0, Audio.FRAME_SIZE);
-				        if((fin.read(array)) == -1) 
+				      if((fin.read(array)) == -1) 
 				        	break;
-				    }		
-				 bos.close();				
+				    }					
 				 fin.close();	            
-				}
-				else if(mySQLiteHelper.SelectedPlace.equals("N"))
-				{
-			    FileInputStream fin = openFileInput(name); 
-			    while(true)
-			    {
-				  Speex.decode(array, array.length, pcmFrame);
-				  player.write(pcmFrame, 0, Audio.FRAME_SIZE);
-			        if((fin.read(array)) == -1) 
-			        	break;
-			    }					
-			    fin.close();
-				}
-				//for(int i=0;i<array.length;i++)
-				//	System.out.println("array"+array[i]);
-				//for(int i=0;i<pcmFrame.length;i++)
-			   //  System.out.println("pcmFrame"+pcmFrame[i]);
+			    
+				/*for(int i=0;i<array.length;i++)
+					System.out.println("array"+array[i]);
+				  for(int i=0;i<pcmFrame.length;i++)
+			        System.out.println("pcmFrame"+pcmFrame[i]);
+			    */
+			    
 	 		} catch (IOException e) 
 	 		{
-	 			
 	 			e.printStackTrace();
 	 		} 
-			//System.out.println("读语音");
 	 		player.stop();
 	 		player.release();
-			}
-		
-		
-		
+	 		is=true;
+	 		//System.out.println("当前线程结束"+pt.getId()+player.getPlayState());
+		}
+		public void stopThread() 
+		{	
+			isRun=false;
+		}
+		@Override
+		public void destroy()
+		{
+			super.destroy();
+		}
 	}
 	
 	@Override
 	protected void onDestroy() 
 	{
-		if(pt!=null)
-		{
-		if(pt.isAlive())
-		    pt.stop();
-		}
-		if(player!=null)
-		{
-			if(player.getState()==player.PLAYSTATE_PLAYING)
-			{
-				player.stop();
-	 		    player.release();
-			}	
-		}
+		
+		isRun=false;
 		super.onDestroy();
 	}
 
 	@Override
 	protected void onPause() 
 	{
-		if(pt!=null)
-		{
-		if(pt.isAlive())
-		   pt.stop();
-		}
-		if(player!=null)
-		{
-			if(player.getState()==player.PLAYSTATE_PLAYING)
-			{
-				player.stop();
-	 		    player.release();
-			}	
-		}
+		isRun=false;
 		super.onPause();
 	}
 

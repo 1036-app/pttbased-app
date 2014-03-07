@@ -17,13 +17,19 @@ along with pttdroid.  If not, see <http://www.gnu.org/licenses/>. */
 
 package ro.ui.pttdroid;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import ro.ui.pttdroid.codecs.Speex;
 import ro.ui.pttdroid.settings.AudioSettings;
@@ -45,6 +51,10 @@ public class Recorder extends Thread
 	private DatagramPacket packet;
 	private short[] pcmFrame = new short[Audio.FRAME_SIZE];
 	private byte[] encodedFrame;
+    public  FileOutputStream outStream=null;
+    public  File myfile=null;
+    public  String fname=null;
+    public boolean ending=false;
 			
 	public void run() 
 	{
@@ -55,24 +65,68 @@ public class Recorder extends Thread
 			recorder.startRecording();
 			while(isRecording()) 
 			{
-				if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)//用户选择了默认的值（自己选择码率）
+				if(ending==false)
 				{
+				   if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)//用户选择了默认的值（自己选择码率）
+				   {
+					  
 					recorder.read(pcmFrame, 0, Audio.FRAME_SIZE);    //把音频数据记录到缓存pcmFrame中
-					Speex.encode(pcmFrame, encodedFrame);		     //对音频数据进行编码，结果放到encodedFrame中				
-				}
+					Speex.encode(pcmFrame, encodedFrame);	//数据进行编码，结果放到encodedFrame中	
+				   }
+				   else
+				   {
+					recorder.read(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
+				   }
+				   try {
+					   if(outStream!=null)
+					     outStream.write(encodedFrame);
+				    } catch (IOException e1) 
+				    {
+					e1.printStackTrace();
+				    }   //将编码后的语音信息存入文件中
+				 
+				 }
 				else
 				{
-					recorder.read(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
-				
+					
+					String jieshu="END";
+					try {
+						int a= jieshu.getBytes("UTF8").length;
+						encodedFrame=new byte[a];
+						encodedFrame=jieshu.getBytes("UTF8");
+					} catch (UnsupportedEncodingException e) 
+					{
+						e.printStackTrace();
+					}
+					packet = new DatagramPacket(
+							encodedFrame, 
+							encodedFrame.length, 
+							CommSettings.getBroadcastAddr(), 
+							CommSettings.getPort());
 				}
 				try 
-				{																				 
-					socket.send(packet);   
+				{	
+					socket.send(packet);    
+				    if(ending==true)
+				    {
+				    	//System.out.println("发送了标志着结束的语音包");
+				    	recording = false;	
+				    	if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)      //用户选择了默认值USE_SPEEX，即自己选择码率编码
+							encodedFrame = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];//获得音频数据编码以后的大小
+						else 
+							encodedFrame = new byte[Audio.FRAME_SIZE_IN_BYTES];                             
+						packet = new DatagramPacket(
+								encodedFrame, 
+								encodedFrame.length, 
+								CommSettings.getBroadcastAddr(), 
+								CommSettings.getPort());  
+				    }
 				}
-				catch(IOException e) 
+				catch(Exception e) 
 				{
 					Log.error(getClass(), e);
 				}	
+				
 			}		
 			
 			recorder.stop();
@@ -150,18 +204,53 @@ public class Recorder extends Thread
 	
 	public synchronized void pauseAudio() 
 	{				
-		recording = false;					
+		if(outStream!=null)
+		{
+		 try {
+				outStream.flush();
+				outStream.close();
+				outStream=null;
+			} catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		
+		  if(fname!=myfile.getName())
+		   {
+			 fname=myfile.getName();
+		     Main.mySqlHelper.inserAudiotData(Main.SqlDB,myfile.getName(),myfile.getAbsolutePath());
+		   }
+		ending=true;
+		}	
 	}	 
-
+	public synchronized void setRecordFalse() 
+	{	
+		recording = false;
+	}
+	
 	public synchronized void resumeAudio() 
-	{				
-		recording = true;			
+	{	
+		
+		SimpleDateFormat formatter= new SimpleDateFormat("yyyyMMdd-HH-mm-ss-SSS");     
+		Date curDate=new Date(System.currentTimeMillis());
+		String time=formatter.format(curDate);
+		String filepath="me--"+time;
+		myfile=new File(Main.SDPATH,filepath);
+		try {
+			outStream = new FileOutputStream(myfile);
+			
+		} catch (FileNotFoundException e) 
+		{
+			e.printStackTrace();
+		}
+		recording = true;
+		ending=false;
 		notify();
 	}
 				
 	public synchronized void shutdown() 
 	{
-		pauseAudio();
+		recording = false;	
 		running = false;				
 		notify();
 	}
