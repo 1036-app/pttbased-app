@@ -13,6 +13,7 @@ import android.widget.TextView;
 public  class mySQLiteHelper extends SQLiteOpenHelper  
 {
 	public static String SelectedFilePath="";
+	public static String IsCoded="";
 	
 	
 	public mySQLiteHelper(Context context, String name, CursorFactory factory,
@@ -27,7 +28,7 @@ public  class mySQLiteHelper extends SQLiteOpenHelper
 	{	
 	String CREATE_TABLE="create table information( "+"ip,"+"time,"+"content)";
 	db.execSQL(CREATE_TABLE);	
-	String TABLE="create table AudioData( "+"filename ,"+"filepath)";
+	String TABLE="create table AudioData( "+"filename ,"+"filepath,"+"coded)";
 	db.execSQL(TABLE);
 	}
 
@@ -108,6 +109,7 @@ public  class mySQLiteHelper extends SQLiteOpenHelper
 	if(cursor.moveToFirst())
 	{
 		SelectedFilePath=cursor.getString(1);
+		IsCoded=cursor.getString(2);
     
 	}
 	else
@@ -118,13 +120,14 @@ public  class mySQLiteHelper extends SQLiteOpenHelper
   /**
 	 * 数据库的插入操作（音频）
 	 */
-	public void inserAudiotData(SQLiteDatabase db,String Filename,String Filepath)
+	public void inserAudiotData(SQLiteDatabase db,String Filename,String Filepath,String iscoded)
 	{
 		//String sql = "INSERT INTO AudioData (filename,data) VALUES ('" + Filename + "', " +"'" + Data + "')";
 		//db.execSQL(sql ); 
 		ContentValues values = new ContentValues(); 
 		values.put("filename", Filename); 
 		values.put("filepath", Filepath); 
+		values.put("coded", iscoded); 
 		db.insert("AudioData", null, values); 
 	}
 	/**

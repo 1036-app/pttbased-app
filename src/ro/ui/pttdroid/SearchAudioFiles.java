@@ -63,7 +63,8 @@ public class SearchAudioFiles extends ListActivity
 		
 		super.onListItemClick(l, v, position, id);
 	    filename=list.get(position);
-		//Main.mySqlHelper.selectAudioData(Main.SqlDB, filename);
+		Main.mySqlHelper.selectAudioData(Main.SqlDB, filename);
+	
 		File f=new File(Main.SDPATH,filename);//相当于只是见了引用，要真正创建，得调用 file.createNewFile()方法。
 		if(f.exists())
 		  { 
@@ -110,19 +111,33 @@ public class SearchAudioFiles extends ListActivity
 					AudioTrack.MODE_STREAM);
 			player.play();
 			try {
+				byte[] array=null;
 				short[] pcmFrame =new short[Audio.FRAME_SIZE];
-				byte[] array = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];	
+				if(mySQLiteHelper.IsCoded.equals("YES"))  //判断该文件是不是经过了编码
+				  {
+					array = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];	
+				  }
+				else
+				    array = new byte[Audio.FRAME_SIZE_IN_BYTES];
 				FileInputStream fin = new FileInputStream(file);
 				fin.read(array);
 				isRun=true;
 				  while(isRun)
 				    {
-					  Speex.decode(array, array.length, pcmFrame);
-					  player.write(pcmFrame, 0, Audio.FRAME_SIZE);
+					  if(mySQLiteHelper.IsCoded.equals("YES"))  //判断该文件是不是经过了编码
+					  {
+					     Speex.decode(array, array.length, pcmFrame);
+					     player.write(pcmFrame, 0, Audio.FRAME_SIZE);
+					  //   System.out.println("解码");
+					  }
+					  else
+						  player.write(array, 0, Audio.FRAME_SIZE_IN_BYTES); 
 				      if((fin.read(array)) == -1) 
 				        	break;
 				    }					
-				 fin.close();	            
+				 fin.close();	
+				 
+			
 			    
 				/*for(int i=0;i<array.length;i++)
 					System.out.println("array"+array[i]);
@@ -137,7 +152,6 @@ public class SearchAudioFiles extends ListActivity
 	 		player.stop();
 	 		player.release();
 	 		is=true;
-	 		//System.out.println("当前线程结束"+pt.getId()+player.getPlayState());
 		}
 		public void stopThread() 
 		{	

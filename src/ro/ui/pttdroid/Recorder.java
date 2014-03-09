@@ -55,6 +55,8 @@ public class Recorder extends Thread
     public  File myfile=null;
     public  String fname=null;
     public boolean ending=false;
+    public String isCoded="YES";
+    public boolean start=false;
 			
 	public void run() 
 	{
@@ -65,18 +67,48 @@ public class Recorder extends Thread
 			recorder.startRecording();
 			while(isRecording()) 
 			{
-				if(ending==false)
+				if(start==true)
 				{
-				   if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)//用户选择了默认的值（自己选择码率）
-				   {
-					  
-					recorder.read(pcmFrame, 0, Audio.FRAME_SIZE);    //把音频数据记录到缓存pcmFrame中
-					Speex.encode(pcmFrame, encodedFrame);	//数据进行编码，结果放到encodedFrame中	
-				   }
-				   else
-				   {
-					recorder.read(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
-				   }
+				   if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)      
+					   isCoded="YES";
+				   else 
+				       isCoded="NO";	
+				   byte[] Frame=null;
+				   try {
+				    	Frame = new byte[isCoded.getBytes("UTF8").length];
+					    Frame=isCoded.getBytes("UTF8");
+				     } catch (UnsupportedEncodingException e1)
+				     {
+					 e1.printStackTrace();
+				     } 
+				
+			       packet = new DatagramPacket(
+					   Frame, 
+					   Frame.length, 
+					   CommSettings.getBroadcastAddr(), 
+					   CommSettings.getPort());  
+				}
+				else 
+				 if(ending==false)
+				  {
+					 if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)      //用户选择了默认值USE_SPEEX，即自己选择码率编码
+				    	{   
+						    isCoded="YES";
+				    		encodedFrame = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];//获得音频数据编码以后的大小
+				    		recorder.read(pcmFrame, 0, Audio.FRAME_SIZE);    //把音频数据记录到缓存pcmFrame中
+							Speex.encode(pcmFrame, encodedFrame);	//数据进行编码，结果放到enc
+				    	}
+				    	else 
+				    	{  
+				    		isCoded="NO";
+							encodedFrame = new byte[Audio.FRAME_SIZE_IN_BYTES]; 
+							recorder.read(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
+				    	}
+						packet = new DatagramPacket(
+								encodedFrame, 
+								encodedFrame.length, 
+								CommSettings.getBroadcastAddr(), 
+								CommSettings.getPort());  
 				   try {
 					   if(outStream!=null)
 					     outStream.write(encodedFrame);
@@ -88,7 +120,6 @@ public class Recorder extends Thread
 				 }
 				else
 				{
-					
 					String jieshu="END";
 					try {
 						int a= jieshu.getBytes("UTF8").length;
@@ -106,20 +137,13 @@ public class Recorder extends Thread
 				}
 				try 
 				{	
-					socket.send(packet);    
+					socket.send(packet);
+					if(start==true)
+					    start=false;
 				    if(ending==true)
 				    {
 				    	//System.out.println("发送了标志着结束的语音包");
-				    	recording = false;	
-				    	if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)      //用户选择了默认值USE_SPEEX，即自己选择码率编码
-							encodedFrame = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];//获得音频数据编码以后的大小
-						else 
-							encodedFrame = new byte[Audio.FRAME_SIZE_IN_BYTES];                             
-						packet = new DatagramPacket(
-								encodedFrame, 
-								encodedFrame.length, 
-								CommSettings.getBroadcastAddr(), 
-								CommSettings.getPort());  
+				    	recording = false;		
 				    }
 				}
 				catch(Exception e) 
@@ -171,9 +195,14 @@ public class Recorder extends Thread
 			}							
 			
 			if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX)      //用户选择了默认值USE_SPEEX，即自己选择码率编码
+			{
+				isCoded="YES";
 				encodedFrame = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];//获得音频数据编码以后的大小
+			}
 			else 
-				encodedFrame = new byte[Audio.FRAME_SIZE_IN_BYTES];                             
+			{   isCoded="NO";
+				encodedFrame = new byte[Audio.FRAME_SIZE_IN_BYTES]; 
+			}
 			packet = new DatagramPacket(
 					encodedFrame, 
 					encodedFrame.length, 
@@ -218,7 +247,7 @@ public class Recorder extends Thread
 		  if(fname!=myfile.getName())
 		   {
 			 fname=myfile.getName();
-		     Main.mySqlHelper.inserAudiotData(Main.SqlDB,myfile.getName(),myfile.getAbsolutePath());
+		     Main.mySqlHelper.inserAudiotData(Main.SqlDB,myfile.getName(),myfile.getAbsolutePath(),isCoded);
 		   }
 		ending=true;
 		}	
@@ -243,6 +272,7 @@ public class Recorder extends Thread
 		{
 			e.printStackTrace();
 		}
+		start=true;
 		recording = true;
 		ending=false;
 		notify();

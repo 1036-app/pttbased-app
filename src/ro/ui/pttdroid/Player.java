@@ -128,6 +128,7 @@ public class Player extends Service
 		private short[] Frame =null; 
 		private byte[] 	encodedFrame;
 		public  File myfile=null;
+		public String bianma="YES";
 	   
 		                        //AtomicInteger，一个提供原子操作的Integer的类。
 		private AtomicInteger progress = new AtomicInteger(0);//设定初始值为0
@@ -142,7 +143,7 @@ public class Player extends Service
 				while(isPlaying()) 
 				{				
 					try 
-					{				
+					{packet = new DatagramPacket(encodedFrame, encodedFrame.length);			
 						socket.receive(packet);	//接收音频数据包
 					}
 					catch(SocketException e) //Due to socket.close() 
@@ -153,73 +154,92 @@ public class Player extends Service
 					{
 						Log.error(getClass(), e);
 					}
+
 					//不接收自己发出的信息包 
 					if(!packet.getAddress().toString().equals(Main.myIPAddres)&&packet.getData()!=null)	
-					{
-						 String ss=""; 
+					{   
+						String ss=""; 
 						 try {
 						ss = new String(packet.getData(),0,packet.getLength(),"utf-8");
 						} catch (UnsupportedEncodingException e1) 
 						{
 						e1.printStackTrace();
 						}
-					   if(ss.equals("END"))                 //如果接收到了标志着结束的语音包
-					     {
-						   System.out.println("接收到了标志着结束的语音包"+ss);
-						 try {
-							outStream.flush();
-							outStream.close();
-							outStream=null;
-							System.out.println("文件已经保存");
-						     } catch (IOException e)
-						    {
-							e.printStackTrace();
-						    }
-					      Main.mySqlHelper.inserAudiotData(Main.SqlDB,myfile.getName(),myfile.getAbsolutePath());
-					      myfile=null;
-					     }
-				       else                              //接受到了正常的语音包
-				        {   
-						                                                //若用户设定为没有回音，且能找到对方的IP地址
-					        if(AudioSettings.getEchoState()==AudioSettings.ECHO_OFF && IP.contains(packet.getAddress()))
-						         continue;
-					        if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) //用户选择了默认的值（自己选择码率）
-					          {
-						      Speex.decode(encodedFrame, encodedFrame.length, pcmFrame);//音频解码，结果放到pcmFrame中
+						System.out.println("收到了"+ss);
 						
-						       player.write(pcmFrame, 0, Audio.FRAME_SIZE);//把音频数据写到player中
-					          }
-					        else 
-					         {			
-						       player.write(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
-				                         //第一个参数，音频数据，第二个参数，偏移量，即从哪开始，第三个参数，数据大小
-					          }
-				           if(myfile==null)
+						 
+						 
+						 if(ss.equals("YES"))                 
+					     {
+							 bianma="YES";
+								System.out.println("需要解码");
+					     }
+					    else 
+					    	if(ss.equals("NO"))                 
 					       {
-					          SimpleDateFormat formatter= new SimpleDateFormat("yyyyMMdd-HH-mm-ss-SSS");     
-					          Date curDate=new Date(System.currentTimeMillis());
-					          String time=formatter.format(curDate);
-					          String filepath="//"+packet.getAddress().toString()+"--"+time;
-					          myfile=new File(Main.SDPATH,filepath);
-					          System.out.println("接收语音信息的文件"+ myfile.getName());
-					          try {
-						            outStream = new FileOutputStream(myfile); 
-					            } catch (FileNotFoundException e)
-					            {
-						         e.printStackTrace();
-					            }
+							 bianma="NO";
+								System.out.println("不需要解码");
 					       }
+						 
+					        else 
+					        	if(ss.equals("END"))                 //如果接收到了标志着结束的语音包
+					            {
+						           System.out.println("接收到了标志着结束的语音包"+ss);
+						           try {
+							       outStream.flush();
+							       outStream.close();
+							       outStream=null;
+							       System.out.println("文件已经保存");
+						           } catch (IOException e)
+						           {
+							       e.printStackTrace();
+						           }
+						           System.out.println("数据库中存入的是否解码值"+bianma);
+					               Main.mySqlHelper.inserAudiotData(Main.SqlDB,myfile.getName(),myfile.getAbsolutePath(),bianma);
+					               myfile=null;
+					              }
+				                 else                              //接受到了正常的语音包
+				                  {   
+						                                                //若用户设定为没有回音，且能找到对方的IP地址
+					                 if(IP.contains(packet.getAddress()))
+						                continue;
+					                 //  if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) //用户选择了默认的值（自己选择码率）
+					                 if(bianma.equals("YES"))         //发送方的语音信息经过了编码 
+					                 { 
+						                Speex.decode(encodedFrame, encodedFrame.length, pcmFrame);//音频解码，结果放到pcmFrame中
+						                player.write(pcmFrame, 0, Audio.FRAME_SIZE);//把音频数据写到player中
+					                 }
+					                 else 
+					                 {	
+						                 player.write(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
+				                                 //第一个参数，音频数据，第二个参数，偏移量，即从哪开始，第三个参数，数据大小
+					                  }
+					               
+				                     if(myfile==null)
+					                 {
+					                   SimpleDateFormat formatter= new SimpleDateFormat("yyyyMMdd-HH-mm-ss-SSS");     
+					                   Date curDate=new Date(System.currentTimeMillis());
+					                   String time=formatter.format(curDate);
+					                   String filepath="//"+packet.getAddress().toString()+"--"+time;
+					                   myfile=new File(Main.SDPATH,filepath);
+					                   System.out.println("接收语音信息的文件"+ myfile.getName());
+					                  try {
+						                  outStream = new FileOutputStream(myfile); 
+					                      } catch (FileNotFoundException e)
+					                       {
+						                    e.printStackTrace();
+					                         }
+					                  }
 				            
-					      try {  
-						       if(outStream!=null)
-						       {
-						    	 
-						           outStream.write(encodedFrame); 
-						        }
-					         } catch (Exception e) 
-					         {
-						     e.printStackTrace();
-					         }
+					                try {  
+						               if(outStream!=null)
+						                  { 
+						                   outStream.write(encodedFrame); 
+						                   }
+					                 } catch (Exception e) 
+					                 {
+						                 e.printStackTrace();
+					                 }
 				      }                           //结束了收到正常语音信息包的else语句
 					}                             //结束了不接收自己信息的if语句
 				progress.incrementAndGet();       //自增加1并获取该值	

@@ -78,7 +78,6 @@ public class Main extends Activity
     public static ArrayList<TransportData>messageList=new ArrayList<TransportData>();
     public Runnable updateWarning=null;
     public static String SDPATH=null;
-    public static byte[] Frame=null;
     public static String myIPAddres=null;
   
     @Override
@@ -91,15 +90,7 @@ public class Main extends Activity
         setContentView(R.layout.main);           
         init();  
         conn();
-        myIPAddres="/"+getIp();
-        if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) 
-        	Frame = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];
-		else 
-			Frame = new byte[Audio.FRAME_SIZE_IN_BYTES];
-        String s="hello";
-        Frame=s.getBytes();
-        //for(int i=0;i<Frame.length;i++)
-		//	  Frame[i]=1;
+        myIPAddres="/"+getIp();  
         String status = Environment.getExternalStorageState();
         if (status.equals(Environment.MEDIA_MOUNTED)) //判断sdcard是否插入
         {
@@ -110,9 +101,9 @@ public class Main extends Activity
          SDPATH=getFilesDir().toString(); // 存到手机内部存储里 
         } 
         	//下面的代码用来删除内部语音文件
-         //File fi=getFilesDir();
-       /*
-       // File fi=Environment.getExternalStorageDirectory();
+        File fi=getFilesDir();
+        /*
+        //File fi=Environment.getExternalStorageDirectory();
         	if (fi.isDirectory())
         	{  
                 File[] childFile = fi.listFiles();  
@@ -279,7 +270,7 @@ public class Main extends Activity
 		getApplicationContext().bindService(reciveIntent, conn,Context.BIND_AUTO_CREATE);
 		                                                    // 绑定服务，创建一个长期存在的连接
 		//创建数据库message.db	
-        mySqlHelper=new mySQLiteHelper(this,"mes.db",null,1);
+        mySqlHelper=new mySQLiteHelper(this,"mydata.db",null,1);
 		SqlDB=mySqlHelper.getWritableDatabase();	
 		
     }
@@ -297,7 +288,7 @@ public class Main extends Activity
     	recorder.shutdown();    		
         Speex.close();
         mySqlHelper.deleteData(SqlDB) ;   //删除数据表中的所有数据
-        //mySqlHelper.deleteAudioData(SqlDB); //删除音频数据
+       // mySqlHelper.deleteAudioData(SqlDB); //删除音频数据
 		mySqlHelper.close();    
         finish();
        
@@ -450,7 +441,7 @@ public class Main extends Activity
 				   }
 			
 				try {
-					Thread.sleep(1000);
+					Thread.sleep(500);
 				} catch (InterruptedException e) 
 				{
 					e.printStackTrace();
