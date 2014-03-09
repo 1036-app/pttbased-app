@@ -24,6 +24,7 @@ import android.content.res.Resources;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
+import android.widget.TextView;
 
 
 
@@ -39,11 +40,13 @@ public class AudioSettings extends PreferenceActivity
 	public static final boolean ECHO_ON = true;
 	public static final boolean ECHO_OFF = false;	
 	
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) 
 	{
 		super.onCreate(savedInstanceState);
-		addPreferencesFromResource(R.xml.settings_audio);		
+		addPreferencesFromResource(R.xml.settings_audio);
+		
 	}	
 	
 	/**
@@ -55,9 +58,8 @@ public class AudioSettings extends PreferenceActivity
 		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		Resources res = context.getResources();
 		
-    	useSpeex = prefs.getBoolean(
-    			"use_speex",
-    			USE_SPEEX);    		    		
+    	useSpeex = prefs.getBoolean("use_speex",USE_SPEEX);  
+		
     	speexQuality = Integer.parseInt(prefs.getString(
     			"speex_quality", 
     			res.getStringArray(R.array.speex_quality_values)[0]));

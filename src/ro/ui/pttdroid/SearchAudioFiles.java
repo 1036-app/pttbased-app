@@ -31,151 +31,127 @@ import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
-public class SearchAudioFiles extends ListActivity
-{
-	public  ArrayList<String> list;
-	private AudioTrack 	player=null; //用来播放声音的
-	public PlayThread pt=null;
-	public String filename ="";
-	public Runnable updateWarning=null;
-	public boolean isRun=true;
-	public boolean is=true;
+public class SearchAudioFiles extends ListActivity {
+	public ArrayList<String> list;
+	private AudioTrack player = null; // 用来播放声音的
+	public PlayThread pt = null;
+	public String filename = "";
+	public Runnable updateWarning = null;
+	public boolean isRun = true;
+	public boolean is = true;
 	@Override
-	protected void onCreate(Bundle savedInstanceState) 
-	{
-		
+	protected void onCreate(Bundle savedInstanceState) {
+
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.search);
 		list = new ArrayList<String>();
-		//读出数据库中的所有音频文件
-		list=Main.mySqlHelper.queryAudioData(Main.SqlDB, list);
-		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.audiolist,
-                R.id.file, list);
+		// 读出数据库中的所有音频文件
+		list = Main.mySqlHelper.queryAudioData(Main.SqlDB, list);
+		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+				R.layout.audiolist, R.id.file, list);
 		setListAdapter(adapter);
-	
-		
 	}
-
-
 	@Override
-	protected void onListItemClick(ListView l, View v, int position, long id)
+	protected void onListItemClick(ListView l, View v, int position, long id) 
 	{
 		
 		super.onListItemClick(l, v, position, id);
-	    filename=list.get(position);
+		filename = list.get(position);
 		Main.mySqlHelper.selectAudioData(Main.SqlDB, filename);
-	
-		File f=new File(Main.SDPATH,filename);//相当于只是见了引用，要真正创建，得调用 file.createNewFile()方法。
-		if(f.exists())
-		  { 
-		     if(player!=null&&player.getPlayState()==player.PLAYSTATE_PLAYING)
-		     {
-		      pt.stopThread();	
-		     }
-		     while(true)     //监听正在播放的语言什么时候结束
-		     {
-			  if(is==true)   //当上一段语音播放结束时，才可以播放下一段
-			  {
-		       pt=new PlayThread (f);
-		       pt.start();
-		       is=false;
-		       return;
-		      }
-		    }
-		  }
-		else
+		File f = new File(Main.SDPATH, filename);   // 相当于只是见了引用，要真正创建，得调用
+													// file.createNewFile()方法。
+		if (f.exists()) 
 		{
-			Toast toast=Toast.makeText(SearchAudioFiles.this,"The file has been deleted",Toast.LENGTH_SHORT );
-		    toast.setGravity(Gravity.CENTER, 0, 0);
-		    toast.show();
+			if (player != null&& player.getPlayState() == player.PLAYSTATE_PLAYING) 
+			{
+				pt.stopThread();
+			}
+			while (true) // 监听正在播放的语言什么时候结束
+			{
+				if (is == true) // 当上一段语音播放结束时，才可以播放下一段
+				{
+					pt = new PlayThread(f);
+					pt.start();
+					is = false;
+					return;
+				}
+			}
+		} else {
+			Toast toast = Toast.makeText(SearchAudioFiles.this,
+					"The file has been deleted", Toast.LENGTH_SHORT);
+			toast.setGravity(Gravity.CENTER, 0, 0);
+			toast.show();
 		}
 	}
-	public class PlayThread extends Thread
-	{
-        private File file;
-		PlayThread(File f)
-		{
-			file=f;
+
+	public class PlayThread extends Thread {
+		private File file;
+
+		PlayThread(File f) {
+			file = f;
 		}
+
 		@Override
-		public void run() 
-		{
+		public void run() {
 			super.run();
-			
-			  player = new AudioTrack(
-					AudioManager.STREAM_MUSIC, 
-					Audio.SAMPLE_RATE, 
-					AudioFormat.CHANNEL_CONFIGURATION_MONO, 
-					Audio.ENCODING_PCM_NUM_BITS, 
-					Audio.TRACK_BUFFER_SIZE, 
+
+			player = new AudioTrack(AudioManager.STREAM_MUSIC,
+					Audio.SAMPLE_RATE, AudioFormat.CHANNEL_CONFIGURATION_MONO,
+					Audio.ENCODING_PCM_NUM_BITS, Audio.TRACK_BUFFER_SIZE,
 					AudioTrack.MODE_STREAM);
 			player.play();
 			try {
-				byte[] array=null;
-				short[] pcmFrame =new short[Audio.FRAME_SIZE];
-				if(mySQLiteHelper.IsCoded.equals("YES"))  //判断该文件是不是经过了编码
-				  {
-					array = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];	
-				  }
-				else
-				    array = new byte[Audio.FRAME_SIZE_IN_BYTES];
+				byte[] array = null;
+				short[] pcmFrame = new short[Audio.FRAME_SIZE];
+				array = new byte[Speex.getEncodedSize(AudioSettings
+						.getSpeexQuality())];
 				FileInputStream fin = new FileInputStream(file);
 				fin.read(array);
-				isRun=true;
-				  while(isRun)
-				    {
-					  if(mySQLiteHelper.IsCoded.equals("YES"))  //判断该文件是不是经过了编码
-					  {
-					     Speex.decode(array, array.length, pcmFrame);
-					     player.write(pcmFrame, 0, Audio.FRAME_SIZE);
-					  //   System.out.println("解码");
-					  }
-					  else
-						  player.write(array, 0, Audio.FRAME_SIZE_IN_BYTES); 
-				      if((fin.read(array)) == -1) 
-				        	break;
-				    }					
-				 fin.close();	
-				 
-			
-			    
-				/*for(int i=0;i<array.length;i++)
-					System.out.println("array"+array[i]);
-				  for(int i=0;i<pcmFrame.length;i++)
-			        System.out.println("pcmFrame"+pcmFrame[i]);
-			    */
-			    
-	 		} catch (IOException e) 
-	 		{
-	 			e.printStackTrace();
-	 		} 
-	 		player.stop();
-	 		player.release();
-	 		is=true;
+				isRun = true;
+				while (isRun) {
+					Speex.decode(array, array.length, pcmFrame);
+					player.write(pcmFrame, 0, Audio.FRAME_SIZE);
+
+					if ((fin.read(array)) == -1)
+						break;
+				}
+				fin.close();
+
+				/*
+				 * for(int i=0;i<array.length;i++)
+				 * System.out.println("array"+array[i]); for(int
+				 * i=0;i<pcmFrame.length;i++)
+				 * System.out.println("pcmFrame"+pcmFrame[i]);
+				 */
+
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			player.stop();
+			player.release();
+			is = true;
 		}
-		public void stopThread() 
-		{	
-			isRun=false;
+
+		public void stopThread() {
+			isRun = false;
 		}
+
 		@Override
-		public void destroy()
-		{
+		public void destroy() {
 			super.destroy();
 		}
 	}
-	
+
 	@Override
-	protected void onDestroy() 
-	{
-		
-		isRun=false;
+	protected void onDestroy() {
+
+		isRun = false;
 		super.onDestroy();
 	}
 
 	@Override
-	protected void onPause() 
-	{
-		isRun=false;
+	protected void onPause() {
+		isRun = false;
 		super.onPause();
 	}
 

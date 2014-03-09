@@ -7,7 +7,8 @@
    <TextView android:id="@+id/file" 
        android:layout_width="fill_parent" 
        android:layout_height="wrap_content" 
-       android:textSize="12pt" 
-       android:singleLine="true" /> 
+       android:textSize="12pt"
+       
+     /> 
   
 </LinearLayout>

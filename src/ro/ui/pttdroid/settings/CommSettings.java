@@ -48,7 +48,8 @@ public class CommSettings extends PreferenceActivity
 	public void onCreate(Bundle savedInstanceState) 
 	{
 		super.onCreate(savedInstanceState);
-		addPreferencesFromResource(R.xml.settings_comm);		
+		addPreferencesFromResource(R.xml.settings_comm);	
+	
 	}		
 	
 	/**

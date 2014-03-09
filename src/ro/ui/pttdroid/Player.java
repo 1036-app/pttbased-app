@@ -52,315 +52,269 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.text.format.Time;
 
-public class Player extends Service
-{
-	private PlayerThread 	playerThread;
+public class Player extends Service {
+	private PlayerThread playerThread;
 	private IBinder playerBinder = new PlayerBinder();
-	private TelephonyManager	telephonyManager;
-	private PhoneCallListener	phoneCallListener;
-	public  FileOutputStream outStream=null;
-	
-	
-	public class PlayerBinder extends Binder 
-	{
-		Player getService() 
-		{        
-            return Player.this;
-        }
-    }	
+	private TelephonyManager telephonyManager;
+	private PhoneCallListener phoneCallListener;
+	public FileOutputStream outStream = null;
+
+	public class PlayerBinder extends Binder {
+		Player getService() {
+			return Player.this;
+		}
+	}
+
 	@Override
-    public void onCreate() 
-	{		 
+	public void onCreate() {
 		playerThread = new PlayerThread();
 		playerThread.start();
-		                     //TelephonyManager类主要提供了一系列用于访问与手机通讯相关的状态和信息的get方法
+		// TelephonyManager类主要提供了一系列用于访问与手机通讯相关的状态和信息的get方法
 		telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 		phoneCallListener = new PhoneCallListener();
-		telephonyManager.listen(phoneCallListener, PhoneStateListener.LISTEN_CALL_STATE);//监听手机的call状态	
-		                   //创建一个通知，制定其图标，标题及通知时间
-		Notification notification = new Notification(R.drawable.notif_icon, 
-				getText(R.string.app_name),
-		        System.currentTimeMillis());
-		
-		Intent notificationIntent = new Intent(this, Main.class);  //当点击消息时就会向系统发送notificationIntent
-		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+		telephonyManager.listen(phoneCallListener,
+				PhoneStateListener.LISTEN_CALL_STATE);// 监听手机的call状态
+		// 创建一个通知，制定其图标，标题及通知时间
+		Notification notification = new Notification(R.drawable.notif_icon,
+				getText(R.string.app_name), System.currentTimeMillis());
+
+		Intent notificationIntent = new Intent(this, Main.class); // 当点击消息时就会向系统发送notificationIntent
+		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+				notificationIntent, 0);
 		notification.setLatestEventInfo(this, getText(R.string.app_name),
-		        getText(R.string.app_running), pendingIntent);
-		startForeground(1, notification);  
-    }
-	
+				getText(R.string.app_running), pendingIntent);
+		startForeground(1, notification);
+	}
+
 	@Override
-	public int onStartCommand(Intent intent, int flags, int startId)
-	{			
+	public int onStartCommand(Intent intent, int flags, int startId) {
 		return START_NOT_STICKY;
 	}
-	
+
 	@Override
-    public IBinder onBind(Intent intent)
-	{    
+	public IBinder onBind(Intent intent) {
 		return playerBinder;
-    }	
-	
-	@Override
-	public void onDestroy() 
-	{
-		playerThread.shutdown();
-		telephonyManager.listen(phoneCallListener, PhoneStateListener.LISTEN_NONE);
 	}
-	
-	public int getProgress() 
-	{
+
+	@Override
+	public void onDestroy() {
+		playerThread.shutdown();
+		telephonyManager.listen(phoneCallListener,
+				PhoneStateListener.LISTEN_NONE);
+	}
+
+	public int getProgress() {
 		return playerThread.getProgress();
 	}
+
 	/**
 	 * 
 	 * @author PC
-	 *
+	 * 
 	 */
-	private class PlayerThread extends Thread
-	{
-		private AudioTrack 	player; //用来播放声音的
-		private volatile boolean running = true;	
+	private class PlayerThread extends Thread {
+		private AudioTrack player; // 用来播放声音的
+		private volatile boolean running = true;
 		private volatile boolean playing = true;
-		private DatagramSocket 	socket;		
-		private DatagramPacket 	packet;	
-		private short[] pcmFrame =null; 
-		private short[] Frame =null; 
-		private byte[] 	encodedFrame;
-		public  File myfile=null;
-		public String bianma="YES";
-	   
-		                        //AtomicInteger，一个提供原子操作的Integer的类。
-		private AtomicInteger progress = new AtomicInteger(0);//设定初始值为0
-		
-		public void run() 
-		{
-			android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);				 
-			
-			while(isRunning())
-			{					
+		private DatagramSocket socket;
+		private DatagramPacket packet;
+		private short[] pcmFrame = null;
+		private short[] Frame = null;
+		private byte[] encodedFrame;
+		public File myfile = null;
+
+		// AtomicInteger，一个提供原子操作的Integer的类。
+		private AtomicInteger progress = new AtomicInteger(0);// 设定初始值为0
+
+		public void run() {
+			android.os.Process
+					.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+
+			while (isRunning()) {
 				init();
-				while(isPlaying()) 
-				{				
-					try 
-					{packet = new DatagramPacket(encodedFrame, encodedFrame.length);			
-						socket.receive(packet);	//接收音频数据包
-					}
-					catch(SocketException e) //Due to socket.close() 
+				while (isPlaying()) 
+				{
+					try {
+						packet = new DatagramPacket(encodedFrame,
+								encodedFrame.length);
+						socket.receive(packet); // 接收音频数据包
+					} catch (SocketException e) // Due to socket.close()
 					{
 						break;
-					}
-					catch(IOException e) 
+					} catch (IOException e) 
 					{
 						Log.error(getClass(), e);
 					}
 
-					//不接收自己发出的信息包 
-					if(!packet.getAddress().toString().equals(Main.myIPAddres)&&packet.getData()!=null)	
-					{   
-						String ss=""; 
-						 try {
-						ss = new String(packet.getData(),0,packet.getLength(),"utf-8");
+					// 不接收自己发出的信息包
+					if (!packet.getAddress().toString().equals(Main.myIPAddres)
+							&& packet.getData() != null) 
+					{
+						String ss = "";
+						try {
+							ss = new String(packet.getData(), 0,
+									packet.getLength(), "utf-8");
 						} catch (UnsupportedEncodingException e1) 
 						{
-						e1.printStackTrace();
+							e1.printStackTrace();
 						}
-						System.out.println("收到了"+ss);
-						
-						 
-						 
-						 if(ss.equals("YES"))                 
-					     {
-							 bianma="YES";
-								System.out.println("需要解码");
-					     }
-					    else 
-					    	if(ss.equals("NO"))                 
-					       {
-							 bianma="NO";
-								System.out.println("不需要解码");
-					       }
-						 
-					        else 
-					        	if(ss.equals("END"))                 //如果接收到了标志着结束的语音包
-					            {
-						           System.out.println("接收到了标志着结束的语音包"+ss);
-						           try {
-							       outStream.flush();
-							       outStream.close();
-							       outStream=null;
-							       System.out.println("文件已经保存");
-						           } catch (IOException e)
-						           {
-							       e.printStackTrace();
-						           }
-						           System.out.println("数据库中存入的是否解码值"+bianma);
-					               Main.mySqlHelper.inserAudiotData(Main.SqlDB,myfile.getName(),myfile.getAbsolutePath(),bianma);
-					               myfile=null;
-					              }
-				                 else                              //接受到了正常的语音包
-				                  {   
-						                                                //若用户设定为没有回音，且能找到对方的IP地址
-					                 if(IP.contains(packet.getAddress()))
-						                continue;
-					                 //  if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) //用户选择了默认的值（自己选择码率）
-					                 if(bianma.equals("YES"))         //发送方的语音信息经过了编码 
-					                 { 
-						                Speex.decode(encodedFrame, encodedFrame.length, pcmFrame);//音频解码，结果放到pcmFrame中
-						                player.write(pcmFrame, 0, Audio.FRAME_SIZE);//把音频数据写到player中
-					                 }
-					                 else 
-					                 {	
-						                 player.write(encodedFrame, 0, Audio.FRAME_SIZE_IN_BYTES);
-				                                 //第一个参数，音频数据，第二个参数，偏移量，即从哪开始，第三个参数，数据大小
-					                  }
-					               
-				                     if(myfile==null)
-					                 {
-					                   SimpleDateFormat formatter= new SimpleDateFormat("yyyyMMdd-HH-mm-ss-SSS");     
-					                   Date curDate=new Date(System.currentTimeMillis());
-					                   String time=formatter.format(curDate);
-					                   String filepath="//"+packet.getAddress().toString()+"--"+time;
-					                   myfile=new File(Main.SDPATH,filepath);
-					                   System.out.println("接收语音信息的文件"+ myfile.getName());
-					                  try {
-						                  outStream = new FileOutputStream(myfile); 
-					                      } catch (FileNotFoundException e)
-					                       {
-						                    e.printStackTrace();
-					                         }
-					                  }
-				            
-					                try {  
-						               if(outStream!=null)
-						                  { 
-						                   outStream.write(encodedFrame); 
-						                   }
-					                 } catch (Exception e) 
-					                 {
-						                 e.printStackTrace();
-					                 }
-				      }                           //结束了收到正常语音信息包的else语句
-					}                             //结束了不接收自己信息的if语句
-				progress.incrementAndGet();       //自增加1并获取该值	
-			     }                               //结束内层的while循环
-				
+						// System.out.println("收到了"+ss);
+
+						if (ss.equals("END")) // 如果接收到了标志着结束的语音包
+						{
+							System.out.println("接收到了标志着结束的语音包" + ss);
+							try {
+								outStream.flush();
+								outStream.close();
+								outStream = null;
+								System.out.println("文件已经保存");
+							} catch (IOException e) 
+							{
+								e.printStackTrace();
+							}
+
+							Main.mySqlHelper.inserAudiotData(Main.SqlDB,
+									myfile.getName(), myfile.getAbsolutePath());
+							myfile = null;
+						}
+						else // 接受到了正常的语音包
+						{
+							// 若用户设定为没有回音，且能找到对方的IP地址
+							if (IP.contains(packet.getAddress()))
+								continue;
+							Speex.decode(encodedFrame, encodedFrame.length,
+									pcmFrame);// 音频解码，结果放到pcmFrame中
+							player.write(pcmFrame, 0, Audio.FRAME_SIZE); // 把音频数据写到player中
+
+							if (myfile == null) 
+							{
+								SimpleDateFormat formatter = new SimpleDateFormat(
+										"yyyyMMdd-HH-mm-ss-SSS");
+								Date curDate = new Date(
+										System.currentTimeMillis());
+								String time = formatter.format(curDate);
+								String filepath = packet.getAddress().toString() +"-"
+										+ time;
+								myfile = new File(Main.SDPATH, filepath);
+								System.out.println("接收语音信息的文件"
+										+ myfile.getName());
+								try {
+									outStream = new FileOutputStream(myfile);
+								} catch (FileNotFoundException e) 
+								{
+									e.printStackTrace();
+								}
+							}
+
+							try {
+								if (outStream != null)
+								{
+									outStream.write(encodedFrame);
+								}
+							} catch (Exception e)
+							{
+								e.printStackTrace();
+							}
+						} // 结束了收到正常语音信息包的else语句
+					} // 结束了不接收自己信息的if语句
+					progress.incrementAndGet(); // 自增加1并获取该值
+				} // 结束内层的while循环
+
 				player.stop();
 				player.release();
-		
-				synchronized(this)
-				{
-					try 
-					{	
-						if(isRunning())
+
+				synchronized (this) {
+					try {
+						if (isRunning())
 							wait();
-					}
-					catch(InterruptedException e) 
-					{
+					} catch (InterruptedException e) {
 						Log.error(getClass(), e);
 					}
-				}			
-		  }
-	  }
-		
-		private void init() 
-		{	
-			try 
-			{						
-				player = new AudioTrack(
-						AudioManager.STREAM_MUSIC, 
-						Audio.SAMPLE_RATE, 
-						AudioFormat.CHANNEL_CONFIGURATION_MONO, 
-						Audio.ENCODING_PCM_NUM_BITS, 
-						Audio.TRACK_BUFFER_SIZE, 
-						AudioTrack.MODE_STREAM);	
-				pcmFrame =new short[Audio.FRAME_SIZE];
-				switch(CommSettings.getCastType()) 
-				{
-					case CommSettings.BROADCAST:
-						 socket = new DatagramSocket(CommSettings.getPort());
-						 socket.setBroadcast(true);
-					     break;
-					case CommSettings.MULTICAST:
-						 socket = new MulticastSocket(CommSettings.getPort());
-						 ((MulticastSocket) socket).joinGroup(CommSettings.getMulticastAddr());										
-					     break;
-					case CommSettings.UNICAST:
-						 socket = new DatagramSocket(CommSettings.getPort());
-					     break;
-				}								
-				if(AudioSettings.useSpeex()==AudioSettings.USE_SPEEX) 
-					encodedFrame = new byte[Speex.getEncodedSize(AudioSettings.getSpeexQuality())];
-				else 
-					encodedFrame = new byte[Audio.FRAME_SIZE_IN_BYTES];
+				}
+			}
+		}
+
+		private void init() {
+			try {
+				player = new AudioTrack(AudioManager.STREAM_MUSIC,
+						Audio.SAMPLE_RATE,
+						AudioFormat.CHANNEL_CONFIGURATION_MONO,
+						Audio.ENCODING_PCM_NUM_BITS, Audio.TRACK_BUFFER_SIZE,
+						AudioTrack.MODE_STREAM);
+				pcmFrame = new short[Audio.FRAME_SIZE];
+				switch (CommSettings.getCastType()) {
+				case CommSettings.BROADCAST:
+					socket = new DatagramSocket(CommSettings.getPort());
+					socket.setBroadcast(true);
+					break;
+				case CommSettings.MULTICAST:
+					socket = new MulticastSocket(CommSettings.getPort());
+					((MulticastSocket) socket).joinGroup(CommSettings
+							.getMulticastAddr());
+					break;
+				case CommSettings.UNICAST:
+					socket = new DatagramSocket(CommSettings.getPort());
+					break;
+				}
+				encodedFrame = new byte[Speex.getEncodedSize(AudioSettings
+						.getSpeexQuality())];
 				packet = new DatagramPacket(encodedFrame, encodedFrame.length);
 				player.play();
-			}
-			catch(IOException e) 
-			{
+			} catch (IOException e) {
 				Log.error(getClass(), e);
-			}		
+			}
 		}
-		
-		private synchronized boolean isRunning()
-		{
+
+		private synchronized boolean isRunning() {
 			return running;
 		}
-			
-		private synchronized boolean isPlaying()
-		{
+
+		private synchronized boolean isPlaying() {
 			return playing;
 		}
-				
-		public synchronized void pauseAudio() 
-		{				
+
+		public synchronized void pauseAudio() {
 			playing = false;
-			
-			try
-			{
-				if(socket instanceof MulticastSocket)
-					((MulticastSocket) socket).leaveGroup(CommSettings.getMulticastAddr());
+
+			try {
+				if (socket instanceof MulticastSocket)
+					((MulticastSocket) socket).leaveGroup(CommSettings
+							.getMulticastAddr());
 				socket.close();
-			}
-			catch (IOException e) 
-			{
+			} catch (IOException e) {
 				Log.error(getClass(), e);
-			}					
+			}
 		}
-		
-		public synchronized void resumeAudio() 
-		{
+
+		public synchronized void resumeAudio() {
 			playing = true;
 			notify();
 		}
-									
-		private synchronized void shutdown() 
-		{			
+
+		private synchronized void shutdown() {
 			pauseAudio();
-			running = false;						
+			running = false;
 			notify();
-			if(socket!=null)
-			socket.close();
+			if (socket != null)
+				socket.close();
 		}
-		
-		public int getProgress() 
-		{
+
+		public int getProgress() {
 			return progress.intValue();
 		}
 
 	}
-	
-	private class PhoneCallListener extends PhoneStateListener
-	{
-		
+
+	private class PhoneCallListener extends PhoneStateListener {
+
 		@Override
-		public void onCallStateChanged (int state, String incomingNumber)//监听电话的状态，一旦状态改变，则调用该函数
+		public void onCallStateChanged(int state, String incomingNumber)// 监听电话的状态，一旦状态改变，则调用该函数
 		{
-			if(state==TelephonyManager.CALL_STATE_OFFHOOK)    //电话挂机状态
+			if (state == TelephonyManager.CALL_STATE_OFFHOOK) // 电话挂机状态
 				playerThread.pauseAudio();
-			else if(state==TelephonyManager.CALL_STATE_IDLE)  //电话空闲状态
+			else if (state == TelephonyManager.CALL_STATE_IDLE) // 电话空闲状态
 				playerThread.resumeAudio();
 		}
-		
+
 	}
 }

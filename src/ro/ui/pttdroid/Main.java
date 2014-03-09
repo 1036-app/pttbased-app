@@ -100,11 +100,19 @@ public class Main extends Activity
         {
          SDPATH=getFilesDir().toString(); // 存到手机内部存储里 
         } 
-        	//下面的代码用来删除内部语音文件
-        File fi=getFilesDir();
-        /*
-        //File fi=Environment.getExternalStorageDirectory();
-        	if (fi.isDirectory())
+       //下面的代码用来删除内部语音文件
+       File fi=getFilesDir();
+       
+        //删除数据库 文件
+         String parentPath=null;
+         parentPath= fi.getParent(); 
+         fi=new File(parentPath,"databases");
+       
+         //删除外部语音文件
+         // File fi=Environment.getExternalStorageDirectory();
+        
+       /* 
+         if (fi.isDirectory())
         	{  
                 File[] childFile = fi.listFiles();  
                 if (childFile == null || childFile.length == 0)
@@ -180,10 +188,12 @@ public class Main extends Activity
 			startActivityForResult(i, 0);
 			return true;
     	case R.id.settings_comm:
+    		
     		i = new Intent(this, CommSettings.class); //若用户选择了communication 这一项，则跳到CommSettingsActivity
     		startActivityForResult(i, 0);    	      //能返回到之前的Activity	
     		return true;
     	case R.id.settings_audio:
+    		
     		i = new Intent(this, AudioSettings.class);
     		startActivityForResult(i, 0);             //调用onActivityResult		
     		return true;    
@@ -270,7 +280,7 @@ public class Main extends Activity
 		getApplicationContext().bindService(reciveIntent, conn,Context.BIND_AUTO_CREATE);
 		                                                    // 绑定服务，创建一个长期存在的连接
 		//创建数据库message.db	
-        mySqlHelper=new mySQLiteHelper(this,"mydata.db",null,1);
+        mySqlHelper=new mySQLiteHelper(this,"mydatabase.db",null,1);
 		SqlDB=mySqlHelper.getWritableDatabase();	
 		
     }
@@ -430,7 +440,6 @@ public class Main extends Activity
 					receivedData = recivebinder.getMessages();
 					receivedIP = recivebinder.getIP();
 				
-					//String IP="/"+getIp();
 				    if(!receivedIP.equals(myIPAddres))  //不接收自己发出的信息
 					  {		
 				    	messageList.add(receivedData);
