@@ -46,6 +46,8 @@ import android.content.Intent;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.telephony.PhoneStateListener;
@@ -147,6 +149,7 @@ public class Player extends Service {
 					}
 
 					// 不接收自己发出的信息包
+					Main.myIPAddres="/"+getIp(); 
 					if (!packet.getAddress().toString().equals(Main.myIPAddres)
 							&& packet.getData() != null) 
 					{
@@ -177,13 +180,13 @@ public class Player extends Service {
 									myfile.getName(), myfile.getAbsolutePath());
 							myfile = null;
 						}
-						else // 接受到了正常的语音包
+						else                      // 接受到了正常的语音包
 						{
-							// 若用户设定为没有回音，且能找到对方的IP地址
+							
 							if (IP.contains(packet.getAddress()))
 								continue;
 							Speex.decode(encodedFrame, encodedFrame.length,
-									pcmFrame);// 音频解码，结果放到pcmFrame中
+									pcmFrame);              // 音频解码，结果放到pcmFrame中
 							player.write(pcmFrame, 0, Audio.FRAME_SIZE); // 把音频数据写到player中
 
 							if (myfile == null) 
@@ -280,17 +283,20 @@ public class Player extends Service {
 					((MulticastSocket) socket).leaveGroup(CommSettings
 							.getMulticastAddr());
 				socket.close();
-			} catch (IOException e) {
+			} catch (IOException e) 
+			{
 				Log.error(getClass(), e);
 			}
 		}
 
-		public synchronized void resumeAudio() {
+		public synchronized void resumeAudio() 
+		{
 			playing = true;
 			notify();
 		}
 
-		private synchronized void shutdown() {
+		private synchronized void shutdown()
+		{
 			pauseAudio();
 			running = false;
 			notify();
@@ -298,10 +304,28 @@ public class Player extends Service {
 				socket.close();
 		}
 
-		public int getProgress() {
+		public int getProgress() 
+		{
 			return progress.intValue();
 		}
-
+		public String getIp()
+		{  
+		    WifiManager wm=(WifiManager)getSystemService(Context.WIFI_SERVICE);  
+		    if(!wm.isWifiEnabled())                     //检查Wifi状态     
+		     wm.setWifiEnabled(true);  
+		    WifiInfo wi=wm.getConnectionInfo();        //获取32位整型IP地址     
+		    int IpAdd=wi.getIpAddress(); 
+		    String Ip=intToIp(IpAdd);                 //把整型地址转换成“*.*.*.*”地址  
+		    return Ip; 
+		   
+		}  
+		public String intToIp(int IpAdd) 
+		{  
+		    return (IpAdd & 0xFF ) + "." +  
+		    ((IpAdd >> 8 ) & 0xFF) + "." +  
+		    ((IpAdd >> 16 ) & 0xFF) + "." +  
+		    ( IpAdd >> 24 & 0xFF) ;  
+		} 
 	}
 
 	private class PhoneCallListener extends PhoneStateListener {

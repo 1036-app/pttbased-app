@@ -14,7 +14,7 @@ public class TransportData implements Serializable
 	public String ipaddress;
 	TransportData()
 	{
-		time=null;
+		time="";
 		data=null;
 		ipaddress=null;
 	}

@@ -257,6 +257,7 @@ public class Main extends Activity
     {
     	
 		recieve = new Recieve();
+		receivedData=new TransportData();
 	    recieve.start();
 		reciveIntent = new Intent(Main.this, ReciveMessage.class);
 		conn = new ServiceConnection() 
@@ -431,12 +432,17 @@ public class Main extends Activity
 			initRecive();                    // 若rec=false则阻塞线程
 			while (rec == true)
 			{
-				
-				if (recivebinder.getMessages() !=null&& receivedData != recivebinder.getMessages()) 
+				if (recivebinder.getMessages() !=null)
+				{
+				if (!receivedData.time.equals(recivebinder.getMessages().time)) 
 				   {
 					receivedData = recivebinder.getMessages();
 					receivedIP = recivebinder.getIP();
-				
+					 myIPAddres="/"+getIp(); 
+					System.out.println("自己的IP"+myIPAddres);
+					System.out.println("收到的ip"+recivebinder.getMessages().ipaddress);
+					//System.out.println("ddddddd"+receivedIP);
+					//if(!recivebinder.getMessages().ipaddress.equals(myIPAddres))
 				    if(!receivedIP.equals(myIPAddres))  //不接收自己发出的信息
 					  {		
 				    	messageList.add(receivedData);
@@ -445,9 +451,9 @@ public class Main extends Activity
 					  }
 				
 				   }
-			
+				 }
 				try {
-					Thread.sleep(500);
+					Thread.sleep(200);
 				} catch (InterruptedException e) 
 				{
 					e.printStackTrace();
@@ -499,7 +505,7 @@ public class Main extends Activity
 	    return Ip; 
 	   
 	}  
-	private String intToIp(int IpAdd) 
+	public String intToIp(int IpAdd) 
 	{  
 	    return (IpAdd & 0xFF ) + "." +  
 	    ((IpAdd >> 8 ) & 0xFF) + "." +  
