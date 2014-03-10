@@ -173,7 +173,7 @@ public class Recorder extends Thread {
 
 			if (fname != myfile.getName()) {
 				fname = myfile.getName();
-				Main.mySqlHelper.inserAudiotData(Main.SqlDB, myfile.getName(),
+				Main.mySqlHelper.inserAudiotData(Main.SqlDB,"me", myfile.getName(),
 						myfile.getAbsolutePath());
 			}
 			ending = true;
@@ -190,7 +190,7 @@ public class Recorder extends Thread {
 				"yyyyMMdd-HH-mm-ss-SSS");
 		Date curDate = new Date(System.currentTimeMillis());
 		String time = formatter.format(curDate);
-		String filepath = "me-" + time;
+		String filepath = time;
 		myfile = new File(Main.SDPATH, filepath);
 		try {
 			outStream = new FileOutputStream(myfile);

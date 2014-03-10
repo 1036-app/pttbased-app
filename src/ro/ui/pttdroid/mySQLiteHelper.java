@@ -1,6 +1,8 @@
 package ro.ui.pttdroid;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -13,7 +15,7 @@ import android.widget.TextView;
 public  class mySQLiteHelper extends SQLiteOpenHelper  
 {
 	public static String SelectedFilePath="";
-	public static String IsCoded="";
+	public static String SelectedSender="";
 	
 	
 	public mySQLiteHelper(Context context, String name, CursorFactory factory,
@@ -28,7 +30,7 @@ public  class mySQLiteHelper extends SQLiteOpenHelper
 	{	
 	String CREATE_TABLE="create table information( "+"ip,"+"time,"+"content)";
 	db.execSQL(CREATE_TABLE);	
-	String TABLE="create table AudioData( "+"filename ,"+"filepath)";
+	String TABLE="create table AudioData( "+"sender ,"+"filename,"+"filepath)";
 	db.execSQL(TABLE);
 	}
 
@@ -84,16 +86,17 @@ public  class mySQLiteHelper extends SQLiteOpenHelper
 	  /**
 		 *查找数据表中音频数据，并显示到SearchAudioFiles.
 		 */
-	public ArrayList<String> queryAudioData(SQLiteDatabase db,ArrayList<String> list ) 
+	public ArrayList<Map<String, String>> queryAudioData(SQLiteDatabase db,ArrayList<Map<String, String>> list ) 
 	{
-	  String filename="";
 	  String sql = "SELECT * FROM AudioData";
 	  Cursor cursor = db.rawQuery(sql,null); 
 	  cursor.moveToFirst(); 
 	  while (!cursor.isAfterLast()) 
 	  { 
-		filename=cursor.getString(0); 
-        list.add(filename); 
+		Map<String, String> map1= new HashMap<String, String>();
+		map1.put("name", cursor.getString(0));
+		map1.put("filename", cursor.getString(1));
+        list.add(map1); 
         cursor.moveToNext(); 
       } 
 	  cursor.close();
@@ -109,6 +112,7 @@ public  class mySQLiteHelper extends SQLiteOpenHelper
 	if(cursor.moveToFirst())
 	{
 		SelectedFilePath=cursor.getString(1);
+		SelectedSender=cursor.getString(2);
 	}
 	else
 		System.out.println("找不到指定的文件");
@@ -118,11 +122,12 @@ public  class mySQLiteHelper extends SQLiteOpenHelper
   /**
 	 * 数据库的插入操作（音频）
 	 */
-	public void inserAudiotData(SQLiteDatabase db,String Filename,String Filepath)
+	public void inserAudiotData(SQLiteDatabase db,String sender,String Filename,String Filepath)
 	{
 		//String sql = "INSERT INTO AudioData (filename,data) VALUES ('" + Filename + "', " +"'" + Data + "')";
 		//db.execSQL(sql ); 
-		ContentValues values = new ContentValues(); 
+		ContentValues values = new ContentValues();
+		values.put("sender", sender);
 		values.put("filename", Filename); 
 		values.put("filepath", Filepath); 
 		//values.put("coded", iscoded); 
@@ -134,6 +139,15 @@ public  class mySQLiteHelper extends SQLiteOpenHelper
 	public void deleteAudioData(SQLiteDatabase db) 
 	{ 
 	  String sql = "DELETE FROM AudioData"; 
+	  db.execSQL(sql ); 
+	  //SqlDB.execSQL("drop table information");
+	} 
+	/**
+	 * 删除数据
+	 */
+	public void deleteSelectedData(SQLiteDatabase db,String fname) 
+	{ 
+	  String sql = "DELETE FROM AudioData  where filename='"+fname+"'";
 	  db.execSQL(sql ); 
 	  //SqlDB.execSQL("drop table information");
 	} 

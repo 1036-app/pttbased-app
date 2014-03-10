@@ -173,7 +173,7 @@ public class Player extends Service {
 								e.printStackTrace();
 							}
 
-							Main.mySqlHelper.inserAudiotData(Main.SqlDB,
+							Main.mySqlHelper.inserAudiotData(Main.SqlDB,packet.getAddress().toString(),
 									myfile.getName(), myfile.getAbsolutePath());
 							myfile = null;
 						}
@@ -193,8 +193,7 @@ public class Player extends Service {
 								Date curDate = new Date(
 										System.currentTimeMillis());
 								String time = formatter.format(curDate);
-								String filepath = packet.getAddress().toString() +"-"
-										+ time;
+								String filepath = time;
 								myfile = new File(Main.SDPATH, filepath);
 								System.out.println("接收语音信息的文件"
 										+ myfile.getName());

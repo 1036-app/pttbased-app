@@ -100,17 +100,15 @@ public class Main extends Activity
         {
          SDPATH=getFilesDir().toString(); // 存到手机内部存储里 
         } 
-       //下面的代码用来删除内部语音文件
-       File fi=getFilesDir();
        
-        //删除数据库 文件
-         String parentPath=null;
-         parentPath= fi.getParent(); 
-         fi=new File(parentPath,"databases");
+     
        
-         //删除外部语音文件
-         // File fi=Environment.getExternalStorageDirectory();
-        
+        //下面的代码可用来删除数据库 文件  
+        File fi=getFilesDir();
+        String parentPath=null;
+        parentPath= fi.getParent(); 
+        fi=new File(parentPath,"databases");
+         
        /* 
          if (fi.isDirectory())
         	{  
@@ -126,7 +124,7 @@ public class Main extends Activity
                      }  
                 }
             } 
-         */ 
+       */ 
         	
        
        
@@ -280,7 +278,7 @@ public class Main extends Activity
 		getApplicationContext().bindService(reciveIntent, conn,Context.BIND_AUTO_CREATE);
 		                                                    // 绑定服务，创建一个长期存在的连接
 		//创建数据库message.db	
-        mySqlHelper=new mySQLiteHelper(this,"mydatabase.db",null,1);
+        mySqlHelper=new mySQLiteHelper(this,"mydata.db",null,1);
 		SqlDB=mySqlHelper.getWritableDatabase();	
 		
     }
@@ -297,8 +295,7 @@ public class Main extends Activity
 		recieve.destroy();
     	recorder.shutdown();    		
         Speex.close();
-        mySqlHelper.deleteData(SqlDB) ;   //删除数据表中的所有数据
-       // mySqlHelper.deleteAudioData(SqlDB); //删除音频数据
+        mySqlHelper.deleteData(SqlDB) ;   //删除数据表中的所有消息数据
 		mySqlHelper.close();    
         finish();
        

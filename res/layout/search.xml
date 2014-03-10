@@ -1,13 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical" >
-
-<ListView android:id="@id/android:list"   
-		  android:layout_width="fill_parent" 
-		  android:layout_height="wrap_content" 
-		  android:drawSelectorOnTop="true"
-		  android:scrollbars="vertical" /> 
-
-</LinearLayout>
+ <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     android:layout_width="fill_parent"
+     android:layout_height="fill_parent"
+     android:orientation="vertical" >
+  <TextView
+   	        android:id="@+id/AudioFiles"
+   	        android:layout_width="fill_parent"
+   	        android:layout_height="50dip"
+   	        android:background="@android:color/darker_gray"
+   	        android:text="Audio Files"
+   	        android:textSize="30sp"
+   	        android:textColor="@color/common_signin_btn_text_dark"
+   	      />
+ <ListView android:id="@id/android:list"    
+ 		  android:layout_width="fill_parent" 
+ 		  android:layout_height="wrap_content" 
+ 		  android:drawSelectorOnTop="true"
+ 		  android:scrollbars="vertical" /> 
+ 		  
+ <ListView android:id="@+id/mylist"    
+ 		  android:layout_width="fill_parent" 
+ 		  android:layout_height="wrap_content" 
+ 		  android:drawSelectorOnTop="true"
+ 		  android:scrollbars="vertical" /> 
+ 
+ </LinearLayout>
