@@ -58,9 +58,6 @@ public class baiduMap extends Activity {
         mMapView.setBuiltInZoomControls(true);  //显示内置缩放控件 
         //保存精度和纬度的类, 
         GeoPoint p =  new GeoPoint((int) (39.915 * 1E6),(int) (116.404 * 1E6));
-
-     //   GeoPoint p = new GeoPoint((int)(22.547923 * 1E6), (int)(114.067368 * 1E6));  
-        //设置p地方为中心点   
         mMapController.setCenter(p);  
         mMapView.regMapViewListener(mBMapManager, new MKMapViewListener() {  
               

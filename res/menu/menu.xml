@@ -13,17 +13,17 @@
 		</menu>		
 	</item>
 	<item android:id="@+id/send"
-		    android:icon="@drawable/send"
-		android:title="@string/send_label">
+		  android:icon="@drawable/send"
+		  android:title="@string/send_label">
 	  </item>
 	<item android:id="@+id/searchAudio"
 		  android:icon="@drawable/icon"
 		  android:title="@string/search_label">
 	</item>
 	
-	<item android:id="@+id/googlemap"
-		  android:icon="@drawable/common_signin_btn_icon_light"
-	      android:title="@string/googlemap_label">
+	<item android:id="@+id/OSMmap"
+	      android:icon="@drawable/osm"
+	      android:title="@string/OSMmap_label">
 	</item>
 	<item android:id="@+id/baidumap"
 		  android:icon="@drawable/baidumap"

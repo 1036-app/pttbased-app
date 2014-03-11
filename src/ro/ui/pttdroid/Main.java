@@ -173,8 +173,8 @@ public class Main extends Activity
     		i = new Intent(this, MessageActivity.class); 
 			startActivityForResult(i, 0); 
             return true;
-     	case R.id.googlemap:
-    		i = new Intent(this, mapActivity.class); 
+     	case R.id.OSMmap:
+    		i = new Intent(this, OSMActivity.class); 
 			startActivityForResult(i, 0); 
             return true;
      	case R.id.baidumap:
@@ -441,9 +441,9 @@ public class Main extends Activity
 					 myIPAddres="/"+getIp(); 
 					System.out.println("自己的IP"+myIPAddres);
 					System.out.println("收到的ip"+recivebinder.getMessages().ipaddress);
-					//System.out.println("ddddddd"+receivedIP);
+					System.out.println("ddddddd"+receivedIP);
 					//if(!recivebinder.getMessages().ipaddress.equals(myIPAddres))
-				    if(!receivedIP.equals(myIPAddres))  //不接收自己发出的信息
+				    if(!recivebinder.getMessages().ipaddress.equals(myIPAddres))  //不接收自己发出的信息
 					  {		
 				    	messageList.add(receivedData);
 				    	mySqlHelper.insertData(SqlDB,receivedData.ipaddress,receivedData.time,receivedData.data);

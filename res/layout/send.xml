@@ -11,7 +11,8 @@
    	        android:background="@android:color/darker_gray"
    	        android:text="Messages"
    	        android:textSize="30sp"
-   	        android:textColor="@color/common_signin_btn_text_dark"
+   	        android:textColor="@android:color/white"
+   	     
    	      />
    	  
    	      <TextView
@@ -30,7 +31,7 @@
    	 
    	       <EditText 
    	        android:id="@+id/textMessage"
-   	       android:layout_width="200dip"
+   	        android:layout_width="200dip"
    	        android:layout_height="wrap_content"
    	        android:text="@string/DefaultMessage"
    	         android:layout_below="@id/textTotal"

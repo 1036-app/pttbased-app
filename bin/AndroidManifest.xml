@@ -2,8 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="ro.ui.pttdroid"
       android:versionName="1.5" android:versionCode="3">
-    <uses-sdk android:minSdkVersion="7" android:targetSdkVersion="18" />
-      
+     <uses-feature
+        android:glEsVersion="0x00020000"
+        android:required="true"/> 
+   
+   <uses-sdk android:targetSdkVersion="16" android:minSdkVersion="7" /> 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />    
@@ -13,7 +16,16 @@
     <!-- 在SDCard中创建和删除文件的权限 -->
      <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>
     <!-- 往SDCard中写入数据的权限 -->
+    
+
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/> 
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    
      <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
     <permission
         android:name="ro.ui.pttdroid.permission.MAPS_RECEIVE"
@@ -29,9 +41,6 @@
          <meta-data
         android:name="com.google.android.maps.v2.API_KEY"
         android:value="AIzaSyCIm2VptPo9s0aPMZeULTPMYbE16eS7GtM"/>
-        <meta-data 
-        android:name="com.google.android.gms.version"
-        android:value="@integer/google_play_services_version"  /> 
        
         <activity 
             android:name=".Main" 
@@ -69,8 +78,8 @@
             android:screenOrientation="portrait">        	
         </activity>
           <activity 
-            android:name=".mapActivity" 
-            android:label="@string/mapActivity_name" 
+            android:name=".OSMActivity" 
+            android:label="@string/OSMActivity_name" 
             android:screenOrientation="portrait">        	
         </activity>
          <activity 
