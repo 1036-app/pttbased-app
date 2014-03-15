@@ -23,13 +23,13 @@ public class OSMActivity extends Activity
 		mMapView = (MapView) findViewById(R.id.mapview);
 	    mResourceProxy = new DefaultResourceProxyImpl(this); 
 	    mMapView.setTileSource(TileSourceFactory.MAPNIK);  
-	    mMapView.setBuiltInZoomControls(true); 
+	    mMapView.setBuiltInZoomControls(true); //显示内置缩放控件 
 	    mMapView.setMultiTouchControls(true); 
 	    mController = mMapView.getController();
-	    GeoPoint center=  new GeoPoint((int) (39.915 * 1E6),(int) (116.404 * 1E6));
+	    GeoPoint center=  new GeoPoint((int) (39.945 * 1E6),(int) (116.404 * 1E6));
 	    //GeoPoint center = new GeoPoint(39.901873, 116.326655);  
         mController.setCenter(center);  
-        mController.setZoom(14);  
+        mController.setZoom(12);  //设置地图缩放级别 
 
 	}
 

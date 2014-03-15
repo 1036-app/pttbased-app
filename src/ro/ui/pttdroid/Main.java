@@ -21,10 +21,16 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.Socket;
+import java.net.SocketException;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 
 import ro.ui.pttdroid.Player.PlayerBinder;
 import ro.ui.pttdroid.ReciveMessage.ReciveBinder;
@@ -49,6 +55,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -68,6 +75,7 @@ public class Main extends Activity
     private MyHandler handler=null;
     private myApplication mAPP=null;
     public TransportData receivedData =null;
+    public TransportData received=null;
     public ReciveBinder recivebinder = null;
     public Recieve recieve = null;
     public static SQLiteDatabase SqlDB;
@@ -79,7 +87,9 @@ public class Main extends Activity
     public Runnable updateWarning=null;
     public static String SDPATH=null;
     public static String myIPAddres=null;
-  
+    public static Socket TCPsocket=null;
+    public static int MessagePort=40000;
+    public static int AudioPort=49999;
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -90,7 +100,7 @@ public class Main extends Activity
         setContentView(R.layout.main);           
         init();  
         conn();
-        myIPAddres="/"+getIp();  
+        myIPAddres="/"+getIp(); 
         String status = Environment.getExternalStorageState();
         if (status.equals(Environment.MEDIA_MOUNTED)) //判断sdcard是否插入
         {
@@ -330,6 +340,7 @@ public class Main extends Activity
 		private volatile boolean	running = false;
 		private ServiceConnection	playerServiceConnection;
 		
+		
 		public void init()
 		{
 	    	microphoneImage = (ImageView) findViewById(R.id.microphone_image);
@@ -434,16 +445,16 @@ public class Main extends Activity
 			{
 				if (recivebinder.getMessages() !=null)
 				{
-				if (!receivedData.time.equals(recivebinder.getMessages().time)) 
+					received=recivebinder.getMessages();
+					
+				if (!receivedData.time.equals(received.time)) 
 				   {
-					receivedData = recivebinder.getMessages();
-					receivedIP = recivebinder.getIP();
-					 myIPAddres="/"+getIp(); 
-					System.out.println("自己的IP"+myIPAddres);
-					System.out.println("收到的ip"+recivebinder.getMessages().ipaddress);
-					System.out.println("ddddddd"+receivedIP);
-					//if(!recivebinder.getMessages().ipaddress.equals(myIPAddres))
-				    if(!recivebinder.getMessages().ipaddress.equals(myIPAddres))  //不接收自己发出的信息
+					//System.out.println("上一次时间"+receivedData.time );
+					//System.out.println("本次时间"+received.time);
+					receivedData = received;
+					receivedIP = received.ipaddress;
+					myIPAddres="/"+getIp(); 
+				    if(!receivedIP.equals(myIPAddres))  //不接收自己发出的信息
 					  {		
 				    	messageList.add(receivedData);
 				    	mySqlHelper.insertData(SqlDB,receivedData.ipaddress,receivedData.time,receivedData.data);
@@ -453,7 +464,7 @@ public class Main extends Activity
 				   }
 				 }
 				try {
-					Thread.sleep(200);
+					Thread.sleep(50);
 				} catch (InterruptedException e) 
 				{
 					e.printStackTrace();
@@ -502,8 +513,7 @@ public class Main extends Activity
 	    WifiInfo wi=wm.getConnectionInfo();        //获取32位整型IP地址     
 	    int IpAdd=wi.getIpAddress(); 
 	    String Ip=intToIp(IpAdd);                 //把整型地址转换成“*.*.*.*”地址  
-	    return Ip; 
-	   
+	    return Ip;    
 	}  
 	public String intToIp(int IpAdd) 
 	{  
@@ -511,6 +521,5 @@ public class Main extends Activity
 	    ((IpAdd >> 8 ) & 0xFF) + "." +  
 	    ((IpAdd >> 16 ) & 0xFF) + "." +  
 	    ( IpAdd >> 24 & 0xFF) ;  
-	} 
-     
+	}  
 }

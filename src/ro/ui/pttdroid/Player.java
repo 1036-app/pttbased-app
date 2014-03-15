@@ -21,17 +21,21 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import ro.ui.pttdroid.ReciveMessage.ReceieveThread;
 import ro.ui.pttdroid.codecs.Speex;
 import ro.ui.pttdroid.settings.AudioSettings;
 import ro.ui.pttdroid.settings.CommSettings;
@@ -54,15 +58,19 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.text.format.Time;
 
-public class Player extends Service {
+public class Player extends Service 
+{
 	private PlayerThread playerThread;
+	private TcpReceieveFiles TReceieveFiles=null;
 	private IBinder playerBinder = new PlayerBinder();
 	private TelephonyManager telephonyManager;
 	private PhoneCallListener phoneCallListener;
 	public FileOutputStream outStream = null;
 
-	public class PlayerBinder extends Binder {
-		Player getService() {
+	public class PlayerBinder extends Binder 
+	{
+		Player getService() 
+		{
 			return Player.this;
 		}
 	}
@@ -71,6 +79,8 @@ public class Player extends Service {
 	public void onCreate() {
 		playerThread = new PlayerThread();
 		playerThread.start();
+		TReceieveFiles=new TcpReceieveFiles();
+		TReceieveFiles.start();
 		// TelephonyManager类主要提供了一系列用于访问与手机通讯相关的状态和信息的get方法
 		telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 		phoneCallListener = new PhoneCallListener();
@@ -101,6 +111,7 @@ public class Player extends Service {
 	@Override
 	public void onDestroy() {
 		playerThread.shutdown();
+		TReceieveFiles.shutDown();
 		telephonyManager.listen(phoneCallListener,
 				PhoneStateListener.LISTEN_NONE);
 	}
@@ -149,7 +160,6 @@ public class Player extends Service {
 					}
 
 					// 不接收自己发出的信息包
-					Main.myIPAddres="/"+getIp(); 
 					if (!packet.getAddress().toString().equals(Main.myIPAddres)
 							&& packet.getData() != null) 
 					{
@@ -161,7 +171,6 @@ public class Player extends Service {
 						{
 							e1.printStackTrace();
 						}
-						// System.out.println("收到了"+ss);
 
 						if (ss.equals("END")) // 如果接收到了标志着结束的语音包
 						{
@@ -170,7 +179,7 @@ public class Player extends Service {
 								outStream.flush();
 								outStream.close();
 								outStream = null;
-								System.out.println("文件已经保存");
+					
 							} catch (IOException e) 
 							{
 								e.printStackTrace();
@@ -198,8 +207,6 @@ public class Player extends Service {
 								String time = formatter.format(curDate);
 								String filepath = time;
 								myfile = new File(Main.SDPATH, filepath);
-								System.out.println("接收语音信息的文件"
-										+ myfile.getName());
 								try {
 									outStream = new FileOutputStream(myfile);
 								} catch (FileNotFoundException e) 
@@ -308,24 +315,7 @@ public class Player extends Service {
 		{
 			return progress.intValue();
 		}
-		public String getIp()
-		{  
-		    WifiManager wm=(WifiManager)getSystemService(Context.WIFI_SERVICE);  
-		    if(!wm.isWifiEnabled())                     //检查Wifi状态     
-		     wm.setWifiEnabled(true);  
-		    WifiInfo wi=wm.getConnectionInfo();        //获取32位整型IP地址     
-		    int IpAdd=wi.getIpAddress(); 
-		    String Ip=intToIp(IpAdd);                 //把整型地址转换成“*.*.*.*”地址  
-		    return Ip; 
-		   
-		}  
-		public String intToIp(int IpAdd) 
-		{  
-		    return (IpAdd & 0xFF ) + "." +  
-		    ((IpAdd >> 8 ) & 0xFF) + "." +  
-		    ((IpAdd >> 16 ) & 0xFF) + "." +  
-		    ( IpAdd >> 24 & 0xFF) ;  
-		} 
+	
 	}
 
 	private class PhoneCallListener extends PhoneStateListener {
@@ -334,10 +324,107 @@ public class Player extends Service {
 		public void onCallStateChanged(int state, String incomingNumber)// 监听电话的状态，一旦状态改变，则调用该函数
 		{
 			if (state == TelephonyManager.CALL_STATE_OFFHOOK) // 电话挂机状态
+			{
 				playerThread.pauseAudio();
+			    TReceieveFiles.pauseMessage();
+			}
 			else if (state == TelephonyManager.CALL_STATE_IDLE) // 电话空闲状态
+			{
 				playerThread.resumeAudio();
+			    TReceieveFiles.resumeMessage();
+			}
 		}
 
 	}
+	
+	public class TcpReceieveFiles extends Thread
+	{
+		public ServerSocket ReceieveSocket=null;
+		public Socket SenderSocket=null;
+		private  boolean playing = true;
+		@Override
+		public void run()
+		{
+		 android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);				 	
+		    try {
+				ReceieveSocket = new ServerSocket(CommSettings.getPort());
+			} catch (IOException e1) 
+			{
+				e1.printStackTrace();
+			}
+		   while(playing)
+		   {	 
+		      try {
+		    	   SenderSocket=ReceieveSocket.accept();
+			      } catch (IOException e1) 
+			      {
+				 e1.printStackTrace();
+			     }
+		      if(SenderSocket!=null)
+		        new Thread(new ReceieveFile(SenderSocket)).start(); 
+		 }
+	 }	
+		public synchronized void resumeMessage() 
+		{
+			playing = true;  
+			notify();
+		}
+		public synchronized void pauseMessage() 
+		{				
+			playing = false;
+		}
+		public synchronized void shutDown() 
+		{	
+		    playing= false;						
+			notify();
+		   try {
+			   if(ReceieveSocket!=null)
+				   ReceieveSocket.close();
+			   if(SenderSocket!=null)
+				   SenderSocket.close();
+				} catch (Exception e) 
+				{	
+					e.printStackTrace();
+				}
+		}
+	}	
+	
+	 public class ReceieveFile extends Thread
+	   {  	  
+		 private Socket SenderSocket = null;  
+	     public ReceieveFile(Socket SS)
+	     {  
+			 this.SenderSocket = SS;  
+	     }  
+		  @Override  
+	     public void run()
+	     { 
+			 String address="";
+			 byte[] Tcpdata=new byte[256];
+			address=SenderSocket.getInetAddress().getHostAddress().toString();
+			 SimpleDateFormat formatter = new SimpleDateFormat(
+						"yyyyMMdd-HH-mm-ss-SSS");
+			Date curDate = new Date(System.currentTimeMillis());
+		    String time = formatter.format(curDate);
+			String filename= time;
+			File file=new File(Main.SDPATH,filename);
+			try {
+				InputStream in = SenderSocket.getInputStream();
+				FileOutputStream fin=new FileOutputStream(file);
+	            int cr=0;
+	            while(cr != -1)
+	            {
+	             cr = in.read(Tcpdata);
+	             fin.write(Tcpdata);
+	            }
+	            in.close();
+	            fin.close();
+			   } catch (IOException e)
+			   {
+				e.printStackTrace();
+			   } 
+			Main.mySqlHelper.inserAudiotData(Main.SqlDB,address,
+					file.getName(), file.getAbsolutePath());
+		 }
+	   }
 }

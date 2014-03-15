@@ -1,13 +1,20 @@
 package ro.ui.pttdroid;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
+
 import ro.ui.pttdroid.settings.CommSettings;
 import ro.ui.pttdroid.util.Log;
 import android.app.Notification;
@@ -25,14 +32,14 @@ public class ReciveMessage extends Service
 	
 	private TelephonyManager	telephonyManager;
 	private PhoneCallListener	phoneCallListener;
-	private volatile boolean running = true;	
-	private volatile boolean playing = true;
-	public ShowMessage showMessage=null;
+	public UdpReceieveMessage UreceiveMessage=null;
+	public TcpReceieveMessage TreceiveMessage=null;
 	public InetAddress senderAddress = null;
 	public IBinder reciveBinder = new ReciveBinder();
 	public TransportData recieveData=null;
 	public byte[]data=null;
 	public String messages="";
+	public String addr="";
 	@Override
 	public IBinder onBind(Intent intent) 
 	{
@@ -41,7 +48,8 @@ public class ReciveMessage extends Service
 	@Override
 	public boolean onUnbind(Intent intent)
 	{
-		showMessage.shutDown();
+		UreceiveMessage.shutDown();
+		TreceiveMessage.shutDown();
 		reciveBinder=null;
 		return super.onUnbind(intent);
 	}
@@ -54,7 +62,7 @@ public class ReciveMessage extends Service
         }
        public String getIP()
        {
-			return senderAddress.toString();
+			return recieveData.ipaddress;
        }
 		ReciveMessage getService() 
 		{        
@@ -65,8 +73,10 @@ public class ReciveMessage extends Service
 	public void onCreate() 
 	{
 	
-	    showMessage=new ShowMessage();
-	    showMessage.start();                                       //TelephonyManager类主要提供了一系列用于访问与手机通讯相关的状态和信息的get方法
+		UreceiveMessage=new UdpReceieveMessage();  //UDP接受信息的線程
+		UreceiveMessage.start();    
+		TreceiveMessage=new TcpReceieveMessage();  //TCP接受信息的線程
+		TreceiveMessage.start();               //TelephonyManager类主要提供了一系列用于访问与手机通讯相关的状态和信息的get方法
 		telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 		phoneCallListener = new PhoneCallListener();
 		telephonyManager.listen(phoneCallListener, PhoneStateListener.LISTEN_CALL_STATE);//监听手机的call状态
@@ -83,64 +93,65 @@ public class ReciveMessage extends Service
 	@Override
 	public void onDestroy()
 	{
-		showMessage.shutDown();
+		UreceiveMessage.shutDown();
+		TreceiveMessage.shutDown();
 		telephonyManager.listen(phoneCallListener, PhoneStateListener.LISTEN_NONE);
 	}
-	
-	public class ShowMessage extends Thread
+	/**
+	 * 處理接收到的数据
+	 * @param data
+	 * @param addr
+	 */
+	public void GetData(byte[] data,String addr)
 	{
-		public DatagramSocket 	socket=null;		
-		public DatagramPacket 	packet=null;	
-		public MessageActivity  messActivity;
+	   try {  
+		    ByteArrayInputStream bais = new ByteArrayInputStream(data);  
+		    ObjectInputStream ois = new ObjectInputStream(bais);  
+		    recieveData = (TransportData)ois.readObject(); 
+		    bais.close();  
+		    ois.close();  
+		    recieveData.ipaddress=addr;
+		  }  
+		  catch(Exception e)
+		  {    
+		    System.out.println(e.toString());
+		    e.printStackTrace();  
+		  }  
+	}
+	public class UdpReceieveMessage extends Thread
+	{
+		private DatagramSocket 	UDPsocket=null;
+		private DatagramPacket 	packet=null;
+		private volatile boolean running = true;	
+		private volatile boolean playing = true;
 		@Override
 		public void run()
 		{
 		 android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);				 	
-		  while(isRunning())
+		  while(running)
 		  { 
 			  init();
-		    while(isPlaying())
-		   {
-		     try 
-		     {	
-		     
-		      data=new byte[256];
+		   while(playing)
+		   {	 
+			 try
+		      {	  
+			  data=new byte[256]; 
 			  packet=new DatagramPacket(data, data.length);
-		      socket.receive(packet); //接收信息数据包
-		       if(senderAddress!=packet.getAddress())
-		       {
-		 	    senderAddress=packet.getAddress();
-		 	  // 如果是发送数据包，则获得数据包要发送的目标地址，如果是接收数据包则返回发送此数据包的源地址。
-		         try {  
-		         ByteArrayInputStream bais = new ByteArrayInputStream(packet.getData());  
-		         ObjectInputStream ois = new ObjectInputStream(bais);  
-		         recieveData = (TransportData)ois.readObject(); 
-		         bais.close();  
-		         ois.close();  
-		         String s=senderAddress.toString();
-		         recieveData.ipaddress=s;
-		         }  
-		         catch(Exception e)
-		         {    
-		        	 System.out.println(e.toString());
-		             e.printStackTrace();  
-		         }   
-		       }
+		      UDPsocket.receive(packet); //接收信息数据包
+		      addr=packet.getAddress().toString();
+		 	   // 如果是发送数据包，则获得数据包要发送的目标地址，如果是接收数据包则返回发送此数据包的源地址。       
 		     }
-		      catch(SocketException e) 
-			    {
-				   break;
-			    }
-			   catch(IOException e) 
-			   {
-				Log.error(getClass(), e);
-			   }
+		    catch(Exception e) 
+			 {
+				break;
+			 }
+			 GetData(packet.getData(),addr);    
 		 }
 		 synchronized(this)
 			{
 				try 
 				{	
-					if(isRunning())
+					if(running)
 						wait();
 				}
 				catch(InterruptedException e) 
@@ -152,38 +163,27 @@ public class ReciveMessage extends Service
 	 }
 
 	public void init()
-	{
-		
+	{	
 		try
 		{
-		socket=new DatagramSocket(40000);
+		UDPsocket=new DatagramSocket(Main.MessagePort);
 		}
-		catch(SocketException e)
+		catch(Exception e)
 		{
 			Log.error(getClass(), e);
 		}
 		
 	 }
-	
-	  private synchronized boolean isRunning()
-	  {
-		return running;
-	  }
-			
-	 private synchronized boolean isPlaying()
-	  {
-		return playing;
-	   }
 				
-		public synchronized void pauseMessage() 
+	public synchronized void pauseMessage() 
 		{				
 			playing = false;
 			
 			try
 			{
-				if(socket instanceof MulticastSocket)
-					((MulticastSocket) socket).leaveGroup(CommSettings.getMulticastAddr());
-				 socket.close();
+				if(UDPsocket instanceof MulticastSocket)
+					((MulticastSocket) UDPsocket).leaveGroup(CommSettings.getMulticastAddr());
+				 UDPsocket.close();
 			}
 			catch (IOException e) 
 			{
@@ -193,7 +193,7 @@ public class ReciveMessage extends Service
 		
 		public synchronized void resumeMessage() 
 		{
-			playing = true;
+			playing = true;  
 			notify();
 		}
 									
@@ -202,12 +202,98 @@ public class ReciveMessage extends Service
 			pauseMessage();
 			running = false;						
 			notify();
-			if(socket!=null)
-			 socket.close();
+		   try {
+			   if(UDPsocket!=null)  
+				   UDPsocket.close();
+				} catch (Exception e) 
+				{	
+					e.printStackTrace();
+				}
 		}
 		
 	
 	}
+	public class TcpReceieveMessage extends Thread
+	{
+		public ServerSocket ReceieveSocket=null;
+		public Socket SenderSocket=null;
+		private  boolean playing = true;
+		@Override
+		public void run()
+		{
+		 android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);				 	
+		    try {
+				ReceieveSocket = new ServerSocket(Main.MessagePort);
+			} catch (IOException e1) 
+			{
+				e1.printStackTrace();
+			}
+		   while(playing)
+		   {	 
+		      try {
+		    	   SenderSocket=ReceieveSocket.accept();
+		    	  // System.out.println("客户端连接成功");
+			      } catch (IOException e1) 
+			      {
+				 e1.printStackTrace();
+			     }
+		      if(SenderSocket!=null)
+		        new Thread(new ReceieveThread(SenderSocket)).start(); 
+		 }
+	 }	
+		public synchronized void resumeMessage() 
+		{
+			playing = true;  
+			notify();
+		}
+		public synchronized void pauseMessage() 
+		{				
+			playing = false;
+		}
+		public synchronized void shutDown() 
+		{	
+		    playing= false;						
+			notify();
+		   try {
+			   if(ReceieveSocket!=null)
+				   ReceieveSocket.close();
+			   if(SenderSocket!=null)
+				   SenderSocket.close();
+				} catch (Exception e) 
+				{	
+					e.printStackTrace();
+				}
+		}
+	}	
+	
+	 public class ReceieveThread extends Thread
+	   {  	  
+		 private Socket SenderSocket = null;  
+	     public ReceieveThread(Socket SS)
+	     {  
+			 this.SenderSocket = SS;  
+	     }  
+		  @Override  
+	     public void run()
+	     {  
+			 byte[] Tcpdata=new byte[256];
+			 String address="";
+	         InputStream in=null;
+			try {
+				in = SenderSocket.getInputStream(); 
+	            int cr=0;
+	            address=SenderSocket.getInetAddress().getHostAddress().toString();
+	            while(cr != -1)
+	            {
+	             cr = in.read(Tcpdata);
+	             }
+			   } catch (IOException e)
+			   {
+				e.printStackTrace();
+			   } 
+			 GetData(Tcpdata,address); 
+		 }
+	   }
 	private class PhoneCallListener extends PhoneStateListener
 	{
 		
@@ -215,9 +301,15 @@ public class ReciveMessage extends Service
 		public void onCallStateChanged (int state, String incomingNumber)//监听电话的状态，一旦状态改变，则调用该函数
 		{
 			if(state==TelephonyManager.CALL_STATE_OFFHOOK)        //电话挂机状态
-				showMessage.pauseMessage();
+			{	
+				UreceiveMessage.pauseMessage();
+		    	TreceiveMessage.pauseMessage();
+			}
 			else if(state==TelephonyManager.CALL_STATE_IDLE)      //电话空闲状态
-				showMessage.resumeMessage();
+			{
+				UreceiveMessage.resumeMessage();
+			    TreceiveMessage.resumeMessage();
+			}
 		}
 		
 	}	

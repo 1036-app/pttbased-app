@@ -2,12 +2,15 @@ package ro.ui.pttdroid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -60,7 +63,7 @@ public class MessageActivity extends Activity
 	public Intent intent=null;
 	private myApplication mAPP = null;   
     private MyHandler mHandler = null;
-
+    public  Socket TCPsocket=null;
 	@Override
 	public void onCreate(Bundle savedInstanceState) 
 	{
@@ -104,13 +107,11 @@ public class MessageActivity extends Activity
 					textTotal.append(Main.messageList.get(i).data +"\n");
 				}
 				Main.messageList.clear();
-				
-				
-				
+		
 			}
 			
 		};
-			
+		
 	}
 	@Override
 	protected void onResume()
@@ -119,13 +120,18 @@ public class MessageActivity extends Activity
 	}
 	@Override
 	protected void onPause()
+	{	
+		super.onPause();
+	}
+
+	@Override
+	protected void onDestroy()
 	{
 		sendMessage.shutdown();
 		mHandler.removeCallbacks(updateRecive);
 		mHandler.removeCallbacks(updateSend);
-		super.onPause();
+		super.onDestroy();
 	}
-
 	/**
 	 * 为程序设置菜单，菜单具体内容来自res/menu/menu.xml文件
 	 */
@@ -156,21 +162,72 @@ public class MessageActivity extends Activity
 		mHandler.removeCallbacks(updateRecive);
 		mHandler.removeCallbacks(updateSend);
     }
+	 public void handleData()
+	 {
+		data = textMessage.getText().toString();
+		SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd   HH:mm:ss:SSS");     
+		Date curDate=new Date(System.currentTimeMillis());
+		time=formatter.format(curDate); 
+		sendData.data=data;
+		sendData.time=time;
+	    sendData.ipaddress="me";
 
+	try {  
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();  
+            ObjectOutputStream oos = new ObjectOutputStream(baos);  
+            oos.writeObject(sendData);
+            messages = baos.toByteArray();  
+            baos.close();  
+            oos.close();      
+        }  
+        catch(Exception e) 
+        {   
+            e.printStackTrace();  
+        }   
+	}
 	class sendButtonListener implements OnClickListener 
 	{
 
 		public void onClick(View v) 
 		{
-			sendMessage.resumeMessage();
+			if(CommSettings.getCastType()==CommSettings.UNICAST)
+			 {
+				TCPSendMessage tsm=new TCPSendMessage();
+				tsm.start();
+			 }
+			else
+			{
+			 sendMessage.resumeMessage();
+			}
+			
 		}
 	}
-	
+	public class TCPSendMessage extends Thread
+	{
+
+		@Override
+		public void run()
+		{
+			InetAddress dstaddr = CommSettings.getUnicastAddr();
+			try {
+				TCPsocket = new Socket(dstaddr, Main.MessagePort);
+				OutputStream out = TCPsocket.getOutputStream(); // 输出流
+				handleData();
+				out.write(messages);
+				out.flush(); // 关闭输出流
+				TCPsocket.close();
+				mHandler.post(updateSend);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+
+		}
+	}
 	
 	public class SendMessage extends Thread
 	{
 		private DatagramPacket packet = null;
-		private DatagramSocket socket = null;
+		private DatagramSocket UDPsocket=null;
 		public volatile boolean sending = false;
 		public volatile boolean running = true;
 
@@ -190,7 +247,7 @@ public class MessageActivity extends Activity
 					try {
 						init();
 						//System.out.println("发出的数据:" + packet.getData().toString());
-						socket.send(packet);
+						UDPsocket.send(packet);
 						mHandler.post(updateSend);
 					} catch (IOException e) 
 					{
@@ -205,8 +262,8 @@ public class MessageActivity extends Activity
 					e.printStackTrace();
 				}
 			}
-			if (socket != null)
-				socket.close();
+			if ( UDPsocket!= null)
+				 UDPsocket.close();
 
 		}
 
@@ -214,45 +271,26 @@ public class MessageActivity extends Activity
 		{
 			try {
 				IP.load();
-				socket = new DatagramSocket();
-				InetAddress addr = null;
+				InetAddress dstaddr = null;
+				UDPsocket=new DatagramSocket();
 				switch (CommSettings.getCastType()) 
 				{
 				case CommSettings.BROADCAST:
-					 socket.setBroadcast(true);
-					 addr = CommSettings.getBroadcastAddr();
+					 UDPsocket.setBroadcast(true);
+					 dstaddr = CommSettings.getBroadcastAddr();
 					 break;
 				case CommSettings.MULTICAST:
-					 addr = CommSettings.getMulticastAddr();
+					 dstaddr = CommSettings.getMulticastAddr();
 					 break;
 				case CommSettings.UNICAST:
-					 addr = CommSettings.getUnicastAddr();
+					 dstaddr = CommSettings.getUnicastAddr();
 					 break;
 				}
-				data = textMessage.getText().toString();
-				SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd   HH:mm:ss:SSS");     
-				Date curDate=new Date(System.currentTimeMillis());
-				time=formatter.format(curDate); 
-				sendData.data=data;
-				sendData.time=time;
-			    sendData.ipaddress="me";
-	
-			try {  
-		            ByteArrayOutputStream baos = new ByteArrayOutputStream();  
-		            ObjectOutputStream oos = new ObjectOutputStream(baos);  
-		            oos.writeObject(sendData);
-		            messages = baos.toByteArray();  
-		            baos.close();  
-		            oos.close();      
-		        }  
-		        catch(Exception e) 
-		        {   
-		            e.printStackTrace();  
-		        }   
-		     // packet = new DatagramPacket(messages, messages.length, addr, CommSettings.getPort());
-				packet = new DatagramPacket(messages, messages.length, addr,40000);
+		        handleData();
+				packet = new DatagramPacket(messages, messages.length, dstaddr,Main.MessagePort);
 			
-			} catch (SocketException e) {
+			} catch (SocketException e)
+			{
 				Log.error(getClass(), e);
 			}
 		}
@@ -287,8 +325,8 @@ public class MessageActivity extends Activity
 		{
 			pauseMessage();
 			running = false;
-			if(socket!=null)
-			  socket.close();
+			if(UDPsocket!=null)
+			 UDPsocket.close();		
 		}
 	}
 }

@@ -19,14 +19,18 @@ package ro.ui.pttdroid;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.SocketException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -42,7 +46,8 @@ import android.media.AudioRecord;
 import android.media.MediaRecorder.AudioSource;
 import android.os.Environment;
 
-public class Recorder extends Thread {
+public class Recorder extends Thread 
+{
 	private AudioRecord recorder;
 	private volatile boolean recording = false;
 	private volatile boolean running = true;
@@ -54,16 +59,21 @@ public class Recorder extends Thread {
 	public File myfile = null;
 	public String fname = null;
 	public boolean ending = false;
-
-	public void run() {
+    public byte[] fileData=null;
+    InetAddress addr = null;
+	public void run() 
+	{
 		android.os.Process
 				.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
 
-		while (isRunning()) {
+		while (isRunning()) 
+		{
 			init();
 			recorder.startRecording();
-			while (isRecording()) {
-				if (ending == false) {
+			while (isRecording()) 
+			{
+				if (ending == false) 
+				{
 						encodedFrame = new byte[Speex
 								.getEncodedSize(AudioSettings.getSpeexQuality())];// 获得音频数据编码以后的大小
 						recorder.read(pcmFrame, 0, Audio.FRAME_SIZE); // 把音频数据记录到缓存pcmFrame中
@@ -76,17 +86,21 @@ public class Recorder extends Thread {
 					try {
 						if (outStream != null)
 							outStream.write(encodedFrame);
-					} catch (IOException e1) {
+					} catch (IOException e1) 
+					{
 						e1.printStackTrace();
 					} // 将编码后的语音信息存入文件中
 
-				} else {
+				}
+				else if(ending==true)
+				{
 					String jieshu = "END";
 					try {
 						int a = jieshu.getBytes("UTF8").length;
 						encodedFrame = new byte[a];
 						encodedFrame = jieshu.getBytes("UTF8");
-					} catch (UnsupportedEncodingException e) {
+					} catch (UnsupportedEncodingException e)
+					{
 						e.printStackTrace();
 					}
 					packet = new DatagramPacket(encodedFrame,
@@ -96,11 +110,13 @@ public class Recorder extends Thread {
 				}
 				try {
 					socket.send(packet);
-					if (ending == true) {
+					if (ending == true) 
+					{
 						// System.out.println("发送了标志着结束的语音包");
 						recording = false;
 					}
-				} catch (Exception e) {
+				} catch (Exception e) 
+				{
 					Log.error(getClass(), e);
 				}
 
@@ -108,11 +124,13 @@ public class Recorder extends Thread {
 
 			recorder.stop();
 
-			synchronized (this) {
+			synchronized (this) 
+			{
 				try {
 					if (isRunning())
 						wait();
-				} catch (InterruptedException e) {
+				} catch (InterruptedException e) 
+				{
 					Log.error(getClass(), e);
 				}
 			}
@@ -122,12 +140,14 @@ public class Recorder extends Thread {
 		recorder.release();
 	}
 
-	private void init() {
+	private void init()
+	{
 		try {
 			IP.load();
 			socket = new DatagramSocket();
-			InetAddress addr = null;
-			switch (CommSettings.getCastType()) {
+			
+			switch (CommSettings.getCastType()) 
+			{
 			case CommSettings.BROADCAST:
 				socket.setBroadcast(true);
 				addr = CommSettings.getBroadcastAddr();
@@ -148,20 +168,24 @@ public class Recorder extends Thread {
 			recorder = new AudioRecord(AudioSource.MIC, Audio.SAMPLE_RATE,
 					AudioFormat.CHANNEL_CONFIGURATION_MONO,
 					Audio.ENCODING_PCM_NUM_BITS, Audio.RECORD_BUFFER_SIZE);
-		} catch (SocketException e) {
+		} catch (SocketException e)
+		{
 			Log.error(getClass(), e);
 		}
 	}
 
-	private synchronized boolean isRunning() {
+	private synchronized boolean isRunning() 
+	{
 		return running;
 	}
 
-	private synchronized boolean isRecording() {
+	private synchronized boolean isRecording() 
+	{
 		return recording;
 	}
 
-	public synchronized void pauseAudio() {
+	public synchronized void pauseAudio() 
+	{
 		if (outStream != null) {
 			try {
 				outStream.flush();
@@ -170,13 +194,22 @@ public class Recorder extends Thread {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-
-			if (fname != myfile.getName()) {
+			
+			if (fname != myfile.getName()) 
+			{
 				fname = myfile.getName();
 				Main.mySqlHelper.inserAudiotData(Main.SqlDB,"me", myfile.getName(),
 						myfile.getAbsolutePath());
+				if(CommSettings.getCastType()==CommSettings.UNICAST)
+				{
+				TCPSendFiles tcs=new TCPSendFiles(myfile);
+				tcs.start();
+				recording = false;
+				}
+				else
+				  ending = true;
 			}
-			ending = true;
+			
 		}
 	}
 
@@ -184,7 +217,8 @@ public class Recorder extends Thread {
 		recording = false;
 	}
 
-	public synchronized void resumeAudio() {
+	public synchronized void resumeAudio() 
+	{
 
 		SimpleDateFormat formatter = new SimpleDateFormat(
 				"yyyyMMdd-HH-mm-ss-SSS");
@@ -203,10 +237,41 @@ public class Recorder extends Thread {
 		notify();
 	}
 
-	public synchronized void shutdown() {
+	public synchronized void shutdown()
+	{
 		recording = false;
 		running = false;
 		notify();
 	}
+	public class TCPSendFiles extends Thread
+	{
+       public Socket TCPsocket =null;
+       public File file=null;
+       TCPSendFiles (File f)
+       {
+    	   this.file=f;
+       }
+		@Override
+		public void run()
+		{
+			try {
+				byte[] filedata=new byte[256];
+				TCPsocket = new Socket(addr, CommSettings.getPort());
+				OutputStream out = TCPsocket.getOutputStream(); // 输出流
+				FileInputStream fin=new FileInputStream(file);
+				int aa=0;
+				while(aa!=-1)
+				{
+				aa=fin.read(filedata);
+				out.write(filedata);
+				}
+				out.flush(); // 关闭输出流
+				TCPsocket.close();
+			} catch (IOException e1) 
+			{
+				e1.printStackTrace();
+			}
 
+		}
+	}
 }
