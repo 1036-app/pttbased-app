@@ -120,12 +120,8 @@ public class Player extends Service
 		return playerThread.getProgress();
 	}
 
-	/**
-	 * 
-	 * @author PC
-	 * 
-	 */
-	private class PlayerThread extends Thread {
+	private class PlayerThread extends Thread 
+	{
 		private AudioTrack player; // 用来播放声音的
 		private volatile boolean running = true;
 		private volatile boolean playing = true;
@@ -159,7 +155,7 @@ public class Player extends Service
 						Log.error(getClass(), e);
 					}
 
-					// 不接收自己发出的信息包
+					   // 不接收自己发出的信息包
 					if (!packet.getAddress().toString().equals(Main.myIPAddres)
 							&& packet.getData() != null) 
 					{
@@ -171,59 +167,27 @@ public class Player extends Service
 						{
 							e1.printStackTrace();
 						}
-
-						if (ss.equals("END")) // 如果接收到了标志着结束的语音包
+						if(ss.equals("Hello"))
+						{ 
+							//System.out.println("接收到了报告自己IP的包" + ss);
+							String IP=null;
+						    IP=packet.getAddress().toString();
+						    if(IP!=null)
+						  	{
+						  	   if(Main.allIP.isEmpty())
+						  		  Main.allIP.add(IP);
+						  	   else if(!Main.allIP.contains(IP))
+						  		  Main.allIP.add(IP);
+						  	}
+						 }
+						else                    
 						{
-							System.out.println("接收到了标志着结束的语音包" + ss);
-							try {
-								outStream.flush();
-								outStream.close();
-								outStream = null;
-					
-							} catch (IOException e) 
-							{
-								e.printStackTrace();
-							}
-
-							Main.mySqlHelper.inserAudiotData(Main.SqlDB,packet.getAddress().toString(),
-									myfile.getName(), myfile.getAbsolutePath());
-							myfile = null;
-						}
-						else                      // 接受到了正常的语音包
-						{
-							
+							//System.out.println("接受到了正常的语音包" + ss);
 							if (IP.contains(packet.getAddress()))
 								continue;
 							Speex.decode(encodedFrame, encodedFrame.length,
 									pcmFrame);              // 音频解码，结果放到pcmFrame中
 							player.write(pcmFrame, 0, Audio.FRAME_SIZE); // 把音频数据写到player中
-
-							if (myfile == null) 
-							{
-								SimpleDateFormat formatter = new SimpleDateFormat(
-										"yyyyMMdd-HH-mm-ss-SSS");
-								Date curDate = new Date(
-										System.currentTimeMillis());
-								String time = formatter.format(curDate);
-								String filepath = time;
-								myfile = new File(Main.SDPATH, filepath);
-								try {
-									outStream = new FileOutputStream(myfile);
-								} catch (FileNotFoundException e) 
-								{
-									e.printStackTrace();
-								}
-							}
-
-							try {
-								if (outStream != null)
-								{
-									outStream.write(encodedFrame);
-								}
-							} catch (Exception e)
-							{
-								e.printStackTrace();
-							}
 						} // 结束了收到正常语音信息包的else语句
 					} // 结束了不接收自己信息的if语句
 					progress.incrementAndGet(); // 自增加1并获取该值
@@ -342,6 +306,7 @@ public class Player extends Service
 		public ServerSocket ReceieveSocket=null;
 		public Socket SenderSocket=null;
 		private  boolean playing = true;
+		public ReceieveFile Rfile=null;
 		@Override
 		public void run()
 		{
@@ -353,7 +318,7 @@ public class Player extends Service
 				e1.printStackTrace();
 			}
 		   while(playing)
-		   {	 
+		   {	 SenderSocket=null; 
 		      try {
 		    	   SenderSocket=ReceieveSocket.accept();
 			      } catch (IOException e1) 
@@ -361,7 +326,10 @@ public class Player extends Service
 				 e1.printStackTrace();
 			     }
 		      if(SenderSocket!=null)
-		        new Thread(new ReceieveFile(SenderSocket)).start(); 
+		      {	  
+		    	  Rfile=new ReceieveFile(SenderSocket);
+		    	  Rfile.start(); 
+		      }
 		 }
 	 }	
 		public synchronized void resumeMessage() 
@@ -374,7 +342,7 @@ public class Player extends Service
 			playing = false;
 		}
 		public synchronized void shutDown() 
-		{	
+		{
 		    playing= false;						
 			notify();
 		   try {
@@ -391,7 +359,7 @@ public class Player extends Service
 	
 	 public class ReceieveFile extends Thread
 	   {  	  
-		 private Socket SenderSocket = null;  
+		 private Socket SenderSocket = null; 
 	     public ReceieveFile(Socket SS)
 	     {  
 			 this.SenderSocket = SS;  
@@ -401,7 +369,7 @@ public class Player extends Service
 	     { 
 			 String address="";
 			 byte[] Tcpdata=new byte[256];
-			address=SenderSocket.getInetAddress().getHostAddress().toString();
+			 address=SenderSocket.getInetAddress().getHostAddress().toString();
 			 SimpleDateFormat formatter = new SimpleDateFormat(
 						"yyyyMMdd-HH-mm-ss-SSS");
 			Date curDate = new Date(System.currentTimeMillis());
@@ -423,8 +391,11 @@ public class Player extends Service
 			   {
 				e.printStackTrace();
 			   } 
+			
 			Main.mySqlHelper.inserAudiotData(Main.SqlDB,address,
 					file.getName(), file.getAbsolutePath());
-		 }
+			 }
+		 
+		
 	   }
 }

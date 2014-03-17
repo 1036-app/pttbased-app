@@ -32,6 +32,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -72,12 +73,11 @@ public class Recorder extends Thread
 			recorder.startRecording();
 			while (isRecording()) 
 			{
-				if (ending == false) 
-				{
-						encodedFrame = new byte[Speex
+				
+			      encodedFrame = new byte[Speex
 								.getEncodedSize(AudioSettings.getSpeexQuality())];// 获得音频数据编码以后的大小
-						recorder.read(pcmFrame, 0, Audio.FRAME_SIZE); // 把音频数据记录到缓存pcmFrame中
-						Speex.encode(pcmFrame, encodedFrame); // 数据进行编码，结果放到enc
+			      recorder.read(pcmFrame, 0, Audio.FRAME_SIZE); // 把音频数据记录到缓存pcmFrame中
+						Speex.encode(pcmFrame, encodedFrame); // 数据进行编码，结果放到encodedFrame
 					
 					packet = new DatagramPacket(encodedFrame,
 							encodedFrame.length,
@@ -90,38 +90,15 @@ public class Recorder extends Thread
 					{
 						e1.printStackTrace();
 					} // 将编码后的语音信息存入文件中
-
-				}
-				else if(ending==true)
-				{
-					String jieshu = "END";
-					try {
-						int a = jieshu.getBytes("UTF8").length;
-						encodedFrame = new byte[a];
-						encodedFrame = jieshu.getBytes("UTF8");
-					} catch (UnsupportedEncodingException e)
-					{
-						e.printStackTrace();
-					}
-					packet = new DatagramPacket(encodedFrame,
-							encodedFrame.length,
-							CommSettings.getBroadcastAddr(),
-							CommSettings.getPort());
-				}
+			
 				try {
 					socket.send(packet);
-					if (ending == true) 
-					{
-						// System.out.println("发送了标志着结束的语音包");
-						recording = false;
-					}
 				} catch (Exception e) 
 				{
 					Log.error(getClass(), e);
 				}
 
 			}
-
 			recorder.stop();
 
 			synchronized (this) 
@@ -202,12 +179,37 @@ public class Recorder extends Thread
 						myfile.getAbsolutePath());
 				if(CommSettings.getCastType()==CommSettings.UNICAST)
 				{
-				TCPSendFiles tcs=new TCPSendFiles(myfile);
-				tcs.start();
-				recording = false;
+				    TCPSendFiles tcs=new TCPSendFiles(myfile,addr);
+				    tcs.start();
+				    recording = false;
 				}
-				else
-				  ending = true;
+				
+				else if(CommSettings.getCastType()==CommSettings.BROADCAST&&Main.allIP.size()!=0)
+				{
+				
+					System.out.println("所在子网有多少个IP在线"+Main.allIP.size());
+					for(int i=0;i<Main.allIP.size();i++)
+					{
+					  String ip=null;
+					  ip=Main.allIP.get(i);
+					  ip=ip.substring(1);
+					   InetAddress address=null;
+					   try {
+						address = InetAddress.getByName(ip);
+					   } catch (UnknownHostException e) 
+					   {
+						e.printStackTrace();
+					   }
+					   TCPSendFiles tcs=new TCPSendFiles(myfile,address);
+				       tcs.start();
+					}
+					recording = false;	
+				}
+				else if(CommSettings.getCastType()==CommSettings.MULTICAST)
+				{ 
+					//组播语音文件怎么发
+					recording = false;
+				}
 			}
 			
 		}
@@ -233,7 +235,6 @@ public class Recorder extends Thread
 			e.printStackTrace();
 		}
 		recording = true;
-		ending = false;
 		notify();
 	}
 
@@ -247,16 +248,18 @@ public class Recorder extends Thread
 	{
        public Socket TCPsocket =null;
        public File file=null;
-       TCPSendFiles (File f)
+       public InetAddress address=null;
+       TCPSendFiles (File f,InetAddress address)
        {
     	   this.file=f;
+    	   this.address=address;
        }
 		@Override
 		public void run()
 		{
 			try {
 				byte[] filedata=new byte[256];
-				TCPsocket = new Socket(addr, CommSettings.getPort());
+				TCPsocket = new Socket(address, CommSettings.getPort());
 				OutputStream out = TCPsocket.getOutputStream(); // 输出流
 				FileInputStream fin=new FileInputStream(file);
 				int aa=0;
@@ -271,7 +274,6 @@ public class Recorder extends Thread
 			{
 				e1.printStackTrace();
 			}
-
 		}
 	}
 }

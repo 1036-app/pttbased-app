@@ -46,10 +46,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class SearchAudioFiles extends ListActivity {
-	 public LinearLayout myListViewlayout;
-     public ListView mListView=null;
-     public SimpleAdapter adapter=null;
-     public  int MID;
+    public LinearLayout myListViewlayout;
+    public ListView mListView=null;
+    public SimpleAdapter adapter=null;
+    public  int MID;
      // 创建一个List对象，用来存放列表项的每一行map信息
     ArrayList<Map<String, String>> list = new ArrayList<Map<String, String>>();
 	private AudioTrack player = null; // 用来播放声音的

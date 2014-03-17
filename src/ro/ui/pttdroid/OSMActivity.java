@@ -18,7 +18,6 @@ public class OSMActivity extends Activity
 	protected void onCreate(Bundle savedInstanceState)
 	{   
 		super.onCreate(savedInstanceState);
-		
 		setContentView(R.layout.osmmap); 
 		mMapView = (MapView) findViewById(R.id.mapview);
 	    mResourceProxy = new DefaultResourceProxyImpl(this); 
@@ -27,7 +26,7 @@ public class OSMActivity extends Activity
 	    mMapView.setMultiTouchControls(true); 
 	    mController = mMapView.getController();
 	    GeoPoint center=  new GeoPoint((int) (39.945 * 1E6),(int) (116.404 * 1E6));
-	    //GeoPoint center = new GeoPoint(39.901873, 116.326655);  
+	    //GeoPoint center = new GeoPoint(39.901873, 116.326655);
         mController.setCenter(center);  
         mController.setZoom(12);  //设置地图缩放级别 
 
