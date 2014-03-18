@@ -94,7 +94,7 @@ public class Main extends Activity
     public static Socket TCPsocket=null;
     public static int MessagePort=40000;
     public static int AudioPort=49999;
-    public static List<String> allIP=new ArrayList<String>();
+    public static List<String> allIP=null;
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -105,6 +105,7 @@ public class Main extends Activity
         setContentView(R.layout.main);           
         init();  
         conn();
+        allIP=new ArrayList<String>();
         myIPAddres="/"+getIp(); 
         String status = Environment.getExternalStorageState();
         if (status.equals(Environment.MEDIA_MOUNTED)) //判断sdcard是否插入
@@ -115,8 +116,6 @@ public class Main extends Activity
         {
          SDPATH=getFilesDir().toString(); // 存到手机内部存储里 
         } 
-       // receieceIP recIP=new receieceIP();
-       // recIP.start();
         sendIP senIP=new sendIP();
         senIP.start();
        
@@ -456,8 +455,9 @@ public class Main extends Activity
 					
 				if (!receivedData.time.equals(received.time)) 
 				   {
-					//System.out.println("上一次时间"+receivedData.time );
-					//System.out.println("本次时间"+received.time);
+					System.out.println("上一次时间:"+receivedData.time );
+					System.out.println("本次时间:"+received.time);
+					System.out.println("  ");
 					receivedData = received;
 					receivedIP = received.ipaddress;
 					myIPAddres="/"+getIp(); 
@@ -565,50 +565,6 @@ public class Main extends Activity
 			
 			}
 			 super.run();
-		}
-		public void shutdown()
-		{
-			sending=false;
-		}
-	}
-	public class receieceIP extends Thread
-	{
-		public  DatagramSocket socket;
-		public  DatagramPacket packet;
-	    public  byte [] IPcontext=null;
-	    public  boolean sending=true;
-	    public  String IP=null;
-		@Override
-		public void run()
-		{
-			IPcontext=new byte[200];
-			packet = new DatagramPacket(IPcontext,IPcontext.length);
-			try {
-				socket = new DatagramSocket();
-			} catch (SocketException e1) {
-				e1.printStackTrace();
-			}
-			while(sending)
-			{
-				IP=null;
-			   try {
-			    	socket.receive(packet);
-			    	if(packet.getData() != null)
-			    	  IP=packet.getAddress().toString();
-			    	//IP = new String(packet.getData(), 0,packet.getLength(), "utf-8");
-			   } catch (IOException e) 
-			   {
-			       e.printStackTrace();
-			   }
-			   if(IP!=null)
-			   {
-			     if(allIP.isEmpty())
-			       allIP.add(IP);
-			     else if(!allIP.contains(IP))
-				   allIP.add(IP);
-			   }
-			}
-			super.run();
 		}
 		public void shutdown()
 		{

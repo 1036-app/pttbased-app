@@ -169,7 +169,7 @@ public class Player extends Service
 						}
 						if(ss.equals("Hello"))
 						{ 
-							//System.out.println("接收到了报告自己IP的包" + ss);
+							System.out.println("接收到了报告自己IP的包" + ss);
 							String IP=null;
 						    IP=packet.getAddress().toString();
 						    if(IP!=null)

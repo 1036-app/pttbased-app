@@ -35,6 +35,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.text.method.ScrollingMovementMethod;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -48,7 +49,6 @@ public class MessageActivity extends Activity
 {
 
 	public static Intent reciveIntent;
-	public static SendMessage sendMessage;
 	public Button sendButton = null;
 	public TextView textIP = null;
 	public TextView textTotal = null;
@@ -64,6 +64,7 @@ public class MessageActivity extends Activity
 	private myApplication mAPP = null;   
     private MyHandler mHandler = null;
     public  Socket TCPsocket=null;
+    public TCPSendMessage tsm=null;
 	@Override
 	public void onCreate(Bundle savedInstanceState) 
 	{
@@ -82,8 +83,8 @@ public class MessageActivity extends Activity
 		//显示以前的聊天消息读数据库,包括回到Main时保存的信息
 		Main.mySqlHelper.queryData(Main.SqlDB, textTotal);
 		Main.messageList.clear();
-		sendMessage=new SendMessage();
-		sendMessage.start();
+	    tsm=new TCPSendMessage();
+		tsm.start();
 		updateSend =new Runnable()
 		{
 			
@@ -127,7 +128,7 @@ public class MessageActivity extends Activity
 	@Override
 	protected void onDestroy()
 	{
-		sendMessage.shutdown();
+		tsm.shutdown();
 		mHandler.removeCallbacks(updateRecive);
 		mHandler.removeCallbacks(updateSend);
 		super.onDestroy();
@@ -158,11 +159,11 @@ public class MessageActivity extends Activity
 
 	protected void Destroy()
 	{
-		sendMessage.shutdown();
+		tsm.shutdown();
 		mHandler.removeCallbacks(updateRecive);
 		mHandler.removeCallbacks(updateSend);
     }
-	 public void handleData()
+	 public byte[] handleData()
 	 {
 		data = textMessage.getText().toString();
 		SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd   HH:mm:ss:SSS");     
@@ -178,155 +179,116 @@ public class MessageActivity extends Activity
             oos.writeObject(sendData);
             messages = baos.toByteArray();  
             baos.close();  
-            oos.close();      
+            oos.close(); 
+           
         }  
         catch(Exception e) 
         {   
             e.printStackTrace();  
         }   
+	   return messages;
 	}
 	class sendButtonListener implements OnClickListener 
 	{
 
 		public void onClick(View v) 
-		{
-			if(CommSettings.getCastType()==CommSettings.UNICAST)
-			 {
-				TCPSendMessage tsm=new TCPSendMessage();
-				tsm.start();
-			 }
-			else
-			{
-			 sendMessage.resumeMessage();
-			}
+		{ 
 			
+			if(CommSettings.getCastType()==CommSettings.BROADCAST&&Main.allIP.size()==0)
+			{
+			    Toast.makeText(MessageActivity.this, "你的广播列表中没有IP地址", Toast.LENGTH_SHORT).show();
+			    byte[] sendData=null;
+			    sendData=handleData();
+			    mHandler.post(updateSend);
+			}
+			else
+			   tsm.resumeSend();
 		}
 	}
 	public class TCPSendMessage extends Thread
 	{
-
+		public volatile boolean running = true;
+		public volatile boolean sending = false;
 		@Override
 		public void run()
 		{
+          while(running==true)
+          {
+			if(!Main.messageList.isEmpty())
+		     {
+				System.out.println("收到信息后更新界面");
+			    mHandler.post(updateRecive);   
+		     }
+          
+          if(sending==true)
+          {
+			if(CommSettings.getCastType()==CommSettings.UNICAST)
+			{
 			InetAddress dstaddr = CommSettings.getUnicastAddr();
-			try {
-				TCPsocket = new Socket(dstaddr, Main.MessagePort);
-				OutputStream out = TCPsocket.getOutputStream(); // 输出流
+			byte[] sendData=null;
+			sendData=handleData();
+			mHandler.post(updateSend);
+			TCPsendData(dstaddr,sendData);
+			
+			}	
+			else if(CommSettings.getCastType()==CommSettings.BROADCAST)
+			{
+				byte[] sendData=null;
+				sendData=handleData();
+				mHandler.post(updateSend);
+				System.out.println("广播开始发送");
+				System.out.println("总共有IP：    "+Main.allIP.size());
+				for(int i=0;i<Main.allIP.size();i++)
+				{
+				  System.out.println("广播发送第"+(i+1)+"个文件");
+				  String ip=null;
+				  ip=Main.allIP.get(i);
+				  ip=ip.substring(1);
+				  InetAddress address=null;
+				   try {
+					address = InetAddress.getByName(ip);
+				   } catch (UnknownHostException e) 
+				   {
+					e.printStackTrace();
+				   }
+				   TCPsendData(address,sendData);
+				}
+				System.out.println("广播发送完毕");
+				System.out.println("   ");
+			}
+			else if(CommSettings.getCastType()==CommSettings.MULTICAST)
+			{	
 				handleData();
+				//组播发送信息
+				mHandler.post(updateSend);
+			
+			}
+			sending=false;
+          }
+         }
+		}
+		public void resumeSend()
+		{
+			sending=true;
+		}
+		public void shutdown()
+		{
+			running=false;
+		}
+		public void TCPsendData(InetAddress dstaddr,byte[]messages)
+		{
+			try {	
+				System.out.println("发送数据");
+				TCPsocket = new Socket(dstaddr, Main.MessagePort);	
+				OutputStream out = TCPsocket.getOutputStream(); // 输出流
 				out.write(messages);
 				out.flush(); // 关闭输出流
-				TCPsocket.close();
-				mHandler.post(updateSend);
-			} catch (IOException e1) {
+			   TCPsocket.close();	
+			} catch (IOException e1) 
+			{
 				e1.printStackTrace();
 			}
 
-		}
-	}
-	
-	public class SendMessage extends Thread
-	{
-		private DatagramPacket packet = null;
-		private DatagramSocket UDPsocket=null;
-		public volatile boolean sending = false;
-		public volatile boolean running = true;
-
-		@Override
-		public void run() 
-		{
-			android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
-
-			while (isRunning())
-			{   
-				if(!Main.messageList.isEmpty())
-			     {
-				    mHandler.post(updateRecive);   
-			     }
-				if (isSending())
-				{
-					try {
-						init();
-						//System.out.println("发出的数据:" + packet.getData().toString());
-						UDPsocket.send(packet);
-						mHandler.post(updateSend);
-					} catch (IOException e) 
-					{
-						Log.error(getClass(), e);
-					}
-					sending=false;
-				}
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) 
-				{
-					e.printStackTrace();
-				}
-			}
-			if ( UDPsocket!= null)
-				 UDPsocket.close();
-
-		}
-
-		private void init() 
-		{
-			try {
-				IP.load();
-				InetAddress dstaddr = null;
-				UDPsocket=new DatagramSocket();
-				switch (CommSettings.getCastType()) 
-				{
-				case CommSettings.BROADCAST:
-					 UDPsocket.setBroadcast(true);
-					 dstaddr = CommSettings.getBroadcastAddr();
-					 break;
-				case CommSettings.MULTICAST:
-					 dstaddr = CommSettings.getMulticastAddr();
-					 break;
-				case CommSettings.UNICAST:
-					 dstaddr = CommSettings.getUnicastAddr();
-					 break;
-				}
-		        handleData();
-				packet = new DatagramPacket(messages, messages.length, dstaddr,Main.MessagePort);
-			
-			} catch (SocketException e)
-			{
-				Log.error(getClass(), e);
-			}
-		}
-
-		@Override
-		public void destroy()
-		{
-			super.destroy();
-		}
-
-		private synchronized boolean isRunning() 
-		{
-			return running;
-		}
-
-		private synchronized boolean isSending()
-		{
-			return sending;
-		}
-
-		public synchronized void pauseMessage() 
-		{
-			sending = false;
-		}
-
-		public synchronized void resumeMessage() 
-		{
-			sending = true;
-		}
-
-		public synchronized void shutdown() 
-		{
-			pauseMessage();
-			running = false;
-			if(UDPsocket!=null)
-			 UDPsocket.close();		
 		}
 	}
 }
